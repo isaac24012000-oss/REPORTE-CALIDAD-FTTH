@@ -750,11 +750,94 @@ with tab4:
             
             if resultados:
                 df_resultado = pd.DataFrame(resultados)
-                st.write(f"**Criterio:** {criterio_seleccionado}")
-                st.write(f"**Puntaje Máximo:** {puntaje_maximo}")
-                st.dataframe(df_resultado, width='stretch')
                 
-                csv_criterio = df_resultado.to_csv(index=False).encode('utf-8')
+                # Información del criterio
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    st.write(f"**Criterio:** {criterio_seleccionado}")
+                with col2:
+                    st.write(f"**Puntaje Máximo:** {puntaje_maximo}")
+                
+                # Convertir porcentajes a números para cálculos
+                def extraer_numero(val):
+                    try:
+                        return float(str(val).replace('%', ''))
+                    except:
+                        return 0
+                
+                df_resultado['Pct_num'] = df_resultado['Porcentaje (%)'].apply(extraer_numero)
+                pct_promedio = df_resultado['Pct_num'].mean()
+                
+                # Mostrar estadísticas
+                col_stats1, col_stats2, col_stats3 = st.columns(3)
+                with col_stats1:
+                    st.metric("📊 Porcentaje Promedio", f"{pct_promedio:.1f}%")
+                with col_stats2:
+                    pct_max = df_resultado['Pct_num'].max()
+                    st.metric("⬆️ Máximo", f"{pct_max:.1f}%")
+                with col_stats3:
+                    pct_min = df_resultado['Pct_num'].min()
+                    pct_min = 0 if pct_min == 0 and all(df_resultado['Porcentaje (%)'] != '-') else pct_min
+                    st.metric("⬇️ Mínimo", f"{pct_min:.1f}%")
+                
+                st.write("")
+                
+                # Crear tabla mejorada con colores y barras
+                html_resultado = """
+                <style>
+                    .tabla-metricas { width: 100%; border-collapse: collapse; margin: 15px 0; }
+                    .tabla-metricas thead { background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); color: white; }
+                    .tabla-metricas th { padding: 12px; text-align: left; font-weight: bold; }
+                    .tabla-metricas td { padding: 12px; border-bottom: 1px solid #ddd; }
+                    .tabla-metricas tbody tr:hover { background-color: #f5f5f5; }
+                    .barra-progreso { height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden; }
+                    .barra-contenido { height: 100%; border-radius: 4px; }
+                    .excelente { background: linear-gradient(90deg, #28a745 0%, #20c997 100%); }
+                    .bueno { background: linear-gradient(90deg, #17a2b8 0%, #20c997 100%); }
+                    .aceptable { background: linear-gradient(90deg, #ffc107 0%, #fd7e14 100%); }
+                    .bajo { background: linear-gradient(90deg, #dc3545 0%, #e74c3c 100%); }
+                    .agente-col { font-weight: 500; color: #333; }
+                    .puntaje-col { text-align: center; font-weight: bold; }
+                    .porcentaje-col { text-align: center; font-weight: bold; }
+                </style>
+                <table class="tabla-metricas">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%;">🧑 Agente</th>
+                            <th style="width: 15%; text-align: center;">Puntaje</th>
+                            <th style="width: 45%;">Desempeño</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                """
+                
+                for idx, row in df_resultado.iterrows():
+                    agente = row['Agentes Zimach']
+                    puntaje = row['Puntaje']
+                    porcentaje_str = row['Porcentaje (%)']
+                    pct_num = row['Pct_num']
+                    
+                    # Determinar clase de color según desempeño
+                    if pct_num >= 80:
+                        clase_barra = 'excelente'
+                        nivel = '⭐ Excelente'
+                    elif pct_num >= 60:
+                        clase_barra = 'bueno'
+                        nivel = '👍 Bueno'
+                    elif pct_num >= 40:
+                        clase_barra = 'aceptable'
+                        nivel = '⚠️ Aceptable'
+                    else:
+                        clase_barra = 'bajo'
+                        nivel = '❌ Por Mejorar'
+                    
+                    html_resultado += '<tr><td class="agente-col">' + str(agente) + '</td><td class="puntaje-col">' + str(puntaje) + '/' + str(puntaje_maximo) + '</td><td><div style="margin-bottom: 5px;"><div class="barra-progreso"><div class="barra-contenido ' + clase_barra + '" style="width: ' + str(pct_num) + '%;"></div></div><small style="color: #666;">' + porcentaje_str + ' - ' + nivel + '</small></div></td></tr>'
+                
+                html_resultado += '</tbody></table>'
+                
+                st.markdown(html_resultado, unsafe_allow_html=True)
+                
+                csv_criterio = df_resultado[['Agentes Zimach', 'Puntaje', 'Porcentaje (%)']].to_csv(index=False).encode('utf-8')
                 st.download_button(
                     label="📥 Descargar en CSV",
                     data=csv_criterio,
