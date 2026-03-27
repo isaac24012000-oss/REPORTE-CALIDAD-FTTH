@@ -54,8 +54,136 @@ st.markdown("""
     h1, h2, h3 {
         color: #667eea;
     }
+    
+    /* Centrar todas las tablas */
+    [data-testid="stDataFrame"] {
+        margin: 0 auto !important;
+        width: 100% !important;
+    }
+    
+    [data-testid="stDataFrame"] > div {
+        display: flex !important;
+        justify-content: center !important;
+    }
+    
+    /* Centrar contenido de las celdas */
+    [data-testid="stDataFrame"] table {
+        width: 100% !important;
+        margin: 0 auto !important;
+    }
+    
+    [data-testid="stDataFrame"] thead th {
+        text-align: center !important;
+        font-weight: bold !important;
+    }
+    
+    [data-testid="stDataFrame"] tbody td {
+        text-align: center !important;
+        padding: 8px !important;
+    }
+    
+    /* Centrar contenedores de tabs */
+    .stTabs [role="tablist"] {
+        justify-content: center !important;
+    }
+    
+    /* Centrar texto de subheaders */
+    h2, h3 {
+        text-align: center !important;
+    }
+    
+    /* Contenedor principal centrado */
+    .stTab {
+        display: flex !important;
+        justify-content: center !important;
+    }
+    
     </style>
 """, unsafe_allow_html=True)
+
+# Funciones para colorear valores
+def colorear_impacto_desviacion(val):
+    """Colorea valores de Impacto y Desviación: rojo si negativo, verde si positivo"""
+    if pd.isna(val) or val == '-':
+        return ''
+    try:
+        valor_str = str(val).strip().replace('%', '')
+        numero = float(valor_str)
+        if numero < 0:
+            return 'color: #dc3545; font-weight: bold'
+        elif numero > 0:
+            return 'color: #28a745; font-weight: bold'
+    except:
+        pass
+    return ''
+
+def colorear_intensidad(val):
+    """Colorea Intensidad: rojo=Alta, naranja=Media, verde=Bajo"""
+    if pd.isna(val) or val == '-':
+        return ''
+    val_lower = str(val).lower()
+    if 'alta' in val_lower:
+        return 'color: #dc3545; font-weight: bold'
+    elif 'media' in val_lower:
+        return 'color: #fd7e14; font-weight: bold'
+    elif 'bajo' in val_lower or 'baja' in val_lower:
+        return 'color: #28a745; font-weight: bold'
+    return ''
+
+def aplicar_colores_df(df):
+    """Aplica colores al DataFrame para columnas específicas"""
+    df_coloreado = df.copy()
+    
+    # Colorear Impacto (%)
+    if 'Impacto (%)' in df_coloreado.columns:
+        def colorear_impacto_val(x):
+            try:
+                valor_str = str(x).strip().replace('%', '')
+                numero = float(valor_str)
+                if numero < 0:
+                    return f'<span style="color: #dc3545; font-weight: bold">{x}</span>'
+                elif numero > 0:
+                    return f'<span style="color: #28a745; font-weight: bold">{x}</span>'
+            except:
+                pass
+            return x
+        
+        df_coloreado['Impacto (%)'] = df_coloreado['Impacto (%)'].apply(colorear_impacto_val)
+    
+    # Colorear Desviación
+    if 'Desviación' in df_coloreado.columns:
+        def colorear_desviacion_val(x):
+            try:
+                valor_str = str(x).strip().replace('%', '')
+                numero = float(valor_str)
+                if numero < 0:
+                    return f'<span style="color: #dc3545; font-weight: bold">{x}</span>'
+                elif numero > 0:
+                    return f'<span style="color: #28a745; font-weight: bold">{x}</span>'
+            except:
+                pass
+            return x
+        
+        df_coloreado['Desviación'] = df_coloreado['Desviación'].apply(colorear_desviacion_val)
+    
+    # Colorear Intensidad
+    if 'Intensidad' in df_coloreado.columns:
+        def colorear_intensidad_val(x):
+            try:
+                val_lower = str(x).lower()
+                if 'alta' in val_lower:
+                    return f'<span style="color: #dc3545; font-weight: bold">{x}</span>'
+                elif 'media' in val_lower:
+                    return f'<span style="color: #fd7e14; font-weight: bold">{x}</span>'
+                elif 'bajo' in val_lower or 'baja' in val_lower:
+                    return f'<span style="color: #28a745; font-weight: bold">{x}</span>'
+            except:
+                pass
+            return x
+        
+        df_coloreado['Intensidad'] = df_coloreado['Intensidad'].apply(colorear_intensidad_val)
+    
+    return df_coloreado
 
 # Columnas que queremos mostrar
 COLUMNAS_MOSTRAR = [
@@ -74,8 +202,6 @@ COLUMNAS_MOSTRAR = [
 COLUMNAS_COUCHING = [
     'Agentes Zimach',
     'Sale Conv %',
-    'Personalización del discurso según necesidad',
-    'Generación de urgencia',
     'Acción Principal',
     'Detalle de Trabajo'
 ]
@@ -163,8 +289,6 @@ def cargar_datos_couching():
     df_filtrado.columns = [
         'Agentes Zimach',
         'Sale Conv %',
-        'Personalización',
-        'Generación de Urgencia',
         'Acción Principal',
         'Detalle de Trabajo'
     ]
@@ -463,40 +587,53 @@ with col3:
 
 # Tabs para diferentes vistas
 tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    ["📋 Auditorías", "🎯 Couching", "📈 Desempeño", "🔍 Análisis por Criterio", "📚 Leyenda"]
+    ["📋 Control", "📋 Plan de Acción", "📈 Desempeño", "🔍 Análisis por Métrica", "📚 Métricas"]
 )
 
-# Tab 1: Datos de Auditorías
+# Tab 1: Datos de Control
 with tab1:
-    st.subheader("Datos de Auditorías")
-    st.dataframe(df_data, use_container_width=True, height=400)
+    st.write("<h2 style='text-align: center;'>📋 Control de Auditorías</h2>", unsafe_allow_html=True)
+    
+    # Aplicar colores al DataFrame
+    df_coloreado = aplicar_colores_df(df_data)
+    
+    # Convertir a HTML con colores
+    html_tabla = df_coloreado.to_html(escape=False, index=False)
+    html_tabla = f"""
+    <div style="display: flex; justify-content: center; width: 100%;">
+        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px;">
+            {html_tabla}
+        </div>
+    </div>
+    """
+    st.markdown(html_tabla, unsafe_allow_html=True)
     
     # Descargar datos
     csv_data = df_data.to_csv(index=False).encode('utf-8')
     st.download_button(
-        label="📥 Descargar Auditorías en CSV",
+        label="📥 Descargar Control en CSV",
         data=csv_data,
-        file_name=f"auditoria_datos_{datetime.now().strftime('%Y%m%d')}.csv",
+        file_name=f"control_datos_{datetime.now().strftime('%Y%m%d')}.csv",
         mime="text/csv"
     )
 
-# Tab 2: Datos de Couching
+# Tab 2: Plan de Acción
 with tab2:
-    st.subheader("Indicadores Especializados - Couching")
-    st.dataframe(df_couching, use_container_width=True, height=400)
+    st.write("<h2 style='text-align: center;'>📋 Plan de Acción</h2>", unsafe_allow_html=True)
+    st.dataframe(df_couching, width='stretch', height=400)
     
     csv_couching = df_couching.to_csv(index=False).encode('utf-8')
     st.download_button(
-        label="📥 Descargar Couching en CSV",
+        label="📥 Descargar Plan de Acción en CSV",
         data=csv_couching,
-        file_name=f"couching_datos_{datetime.now().strftime('%Y%m%d')}.csv",
+        file_name=f"plan_accion_{datetime.now().strftime('%Y%m%d')}.csv",
         mime="text/csv"
     )
 
 # Tab 3: Desempeño
 with tab3:
-    st.subheader("Puntaje de Desempeño")
-    st.dataframe(df_desempeño, use_container_width=True, height=400)
+    st.write("<h2 style='text-align: center;'>📈 Puntaje de Desempeño</h2>", unsafe_allow_html=True)
+    st.dataframe(df_desempeño, width='stretch', height=400)
     
     csv_desempeño = df_desempeño.to_csv(index=False).encode('utf-8')
     st.download_button(
@@ -506,9 +643,9 @@ with tab3:
         mime="text/csv"
     )
 
-# Tab 4: Análisis por Criterio
+# Tab 4: Análisis por Métrica
 with tab4:
-    st.subheader("Análisis Detallado por Criterio")
+    st.subheader("Análisis Detallado por Métrica")
     
     criterios_opciones = [
         'Presentaciòn',
@@ -615,7 +752,7 @@ with tab4:
                 df_resultado = pd.DataFrame(resultados)
                 st.write(f"**Criterio:** {criterio_seleccionado}")
                 st.write(f"**Puntaje Máximo:** {puntaje_maximo}")
-                st.dataframe(df_resultado, use_container_width=True)
+                st.dataframe(df_resultado, width='stretch')
                 
                 csv_criterio = df_resultado.to_csv(index=False).encode('utf-8')
                 st.download_button(
@@ -629,7 +766,7 @@ with tab4:
 with tab5:
     st.subheader("Leyenda de Métricas - Criterios y Puntajes")
     st.info("Esta tabla muestra todos los criterios de evaluación, sus descripciones, puntajes máximos y la categoría a la que pertenecen.")
-    st.dataframe(df_metricas, use_container_width=True, height=600)
+    st.dataframe(df_metricas, width='stretch', height=600)
     
     csv_metricas = df_metricas.to_csv(index=False).encode('utf-8')
     st.download_button(

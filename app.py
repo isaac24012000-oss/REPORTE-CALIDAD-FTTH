@@ -52,8 +52,6 @@ COLUMNAS_MOSTRAR = [
 COLUMNAS_COUCHING = [
     'Agentes Zimach',
     'Sale Conv %',
-    'Personalización del discurso según necesidad',
-    'Generación de urgencia',
     'Acción Principal',
     'Detalle de Trabajo'
 ]
@@ -148,8 +146,6 @@ def cargar_datos_couching():
     df_filtrado.columns = [
         'Agentes Zimach',
         'Sale Conv %',
-        'Personalización',
-        'Generación de Urgencia',
         'Acción Principal',
         'Detalle de Trabajo'
     ]
