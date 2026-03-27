@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  dashboard:
+    build: .
+    container_name: dashboard_auditorias
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+    environment:
+      - STREAMLIT_SERVER_RUNONSTARTUP=true
+      - STREAMLIT_LOGGER_LEVEL=info
+    restart: unless-stopped

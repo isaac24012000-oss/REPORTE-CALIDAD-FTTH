@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Control de Auditorías</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 30px 0;
+        }
+
+        .container-main {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            animation: slideDown 0.6s ease-out;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.95rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+            animation: slideUp 0.6s ease-out 0.1s both;
+        }
+
+        .table-container h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 700;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        table {
+            font-size: 0.9rem;
+            width: 100%;
+            table-layout: auto;
+        }
+
+        table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        table thead th {
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 15px;
+            border: none;
+            text-align: center;
+        }
+
+        table tbody tr {
+            transition: background-color 0.3s ease;
+        }
+
+        table tbody tr:hover {
+            background-color: #f8f9ff;
+        }
+
+        table tbody td {
+            padding: 12px 15px;
+            vertical-align: middle;
+            border-color: #f0f0f0;
+            text-align: center;
+        }
+        
+        table tbody td:first-child {
+            text-align: left;
+            font-weight: 600;
+        }
+
+        table tbody tr:nth-child(even) {
+            background-color: #f9f9fb;
+        }
+
+        .neutral-value {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .filtro-container {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            background: #f8f9fb;
+            border-radius: 8px;
+        }
+
+        .filtro-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0;
+            white-space: nowrap;
+        }
+
+        .filtro-select {
+            padding: 10px 15px;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            color: #333;
+            background-color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 250px;
+        }
+
+        .filtro-select:hover {
+            border-color: #764ba2;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .filtro-select:focus {
+            outline: none;
+            border-color: #764ba2;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .criterio-resultado-container {
+            margin-top: 15px;
+        }
+
+        .criterio-resultado-container table {
+            margin-top: 0;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .criterio-info-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+            margin-bottom: 0;
+        }
+
+        .criterio-info-header h3 {
+            margin: 0;
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .criterio-info-header .criterio-max {
+            font-size: 0.95rem;
+            margin-top: 8px;
+            opacity: 0.95;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #667eea;
+            border: none;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .refresh-btn:hover {
+            background: #764ba2;
+            transform: scale(1.1);
+            box-shadow: 0 6px 28px rgba(102, 126, 234, 0.6);
+        }
+
+        .refresh-btn:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .table-container {
+                padding: 15px;
+            }
+
+            table {
+                font-size: 0.8rem;
+            }
+
+            table thead th,
+            table tbody td {
+                padding: 8px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-main">
+        <div class="header">
+            <h1><i class="fas fa-chart-bar"></i> Dashboard de Auditorías</h1>
+            <p>Control de Calidad y Desempeño de Agentes Zimach</p>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-label">Total de Agentes</div>
+                <div class="stat-value">{{ total_agentes }}</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-exchange-alt"></i>
+                </div>
+                <div class="stat-label">Conversión Promedio</div>
+                <div class="stat-value">{{ conv_promedio }}</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-star"></i>
+                </div>
+                <div class="stat-label">Calidad Promedio</div>
+                <div class="stat-value">{{ calidad_promedio }}</div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <h2><i class="fas fa-table"></i> Datos de Agentes</h2>
+            {{ tabla | safe }}
+        </div>
+
+        <div class="table-container">
+            <h2><i class="fas fa-book"></i> Couching - Indicadores Especializados</h2>
+            {{ tabla_couching | safe }}
+        </div>
+
+        <div class="table-container">
+            <h2><i class="fas fa-chart-line"></i> Desempeño General - Puntaje Total</h2>
+            {{ tabla_desempeño | safe }}
+        </div>
+    </div>
+
+    <div class="container-main" style="margin-top: 40px;">
+        <div class="table-container">
+            <h2><i class="fas fa-filter"></i> Análisis Detallado por Criterio</h2>
+            <div class="filtro-container">
+                <label for="criterio-select" class="filtro-label">Selecciona un Criterio:</label>
+                <select id="criterio-select" class="filtro-select">
+                    <option value="">-- Selecciona un criterio --</option>
+                    <option value="Presentaciòn">Presentación</option>
+                    <option value="Expresion Verbal / Diccion ">Expresión Verbal / Dicción</option>
+                    <option value="Tiempo de Espera">Tiempo de Espera</option>
+                    <option value="Validación de titular / contacto correcto">Validación de Titular</option>
+                    <option value="Sondeo Asertivo ">Sondeo Asertivo</option>
+                    <option value="Identificación de necesidad">Identificación de Necesidad</option>
+                    <option value="Identificación de capacidad de pago / interés real">Capacidad de Pago / Interés Real</option>
+                    <option value="Detección de decisor (titular o no)">Detección de Decisor</option>
+                    <option value="Escucha Activa">Escucha Activa</option>
+                    <option value="Manejo de llamada">Manejo de Llamada</option>
+                    <option value="Seguridad ">Seguridad</option>
+                    <option value="Empatìa ">Empatía</option>
+                    <option value="Negocacion escalonada">Negociación Escalonada</option>
+                    <option value="Beneficios claros">Beneficios Claros</option>
+                    <option value="Diferenciación vs competencia">Diferenciación vs Competencia</option>
+                    <option value="Personalización del discurso según necesidad">Personalización</option>
+                    <option value="Generación de urgencia">Generación de Urgencia</option>
+                    <option value="Registro correcto en sistema ">Registro en Sistema</option>
+                    <option value="Uso adecuado de etiquetas">Uso de Etiquetas</option>
+                </select>
+            </div>
+            <div id="criterio-resultado" class="criterio-resultado-container"></div>
+        </div>
+
+        <div class="table-container" style="margin-top: 40px; background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 12px;">
+            <h2 style="color: #667eea; margin-bottom: 20px;"><i class="fas fa-book-open"></i> Leyenda de Métricas - Criterios y Puntajes</h2>
+            <p style="color: #666; font-size: 0.95rem; margin-bottom: 20px;">
+                <i class="fas fa-info-circle" style="color: #667eea;"></i> Esta tabla muestra todos los criterios de evaluación, sus descripciones, puntajes máximos y la categoría a la que pertenecen.
+            </p>
+            {{ tabla_metricas | safe }}
+        </div>
+    </div>
+
+    <button class="refresh-btn" onclick="location.reload();" title="Actualizar datos">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Manejo del filtro de criterios
+        document.getElementById('criterio-select').addEventListener('change', function() {
+            const criterio = this.value;
+            const resultContainer = document.getElementById('criterio-resultado');
+            
+            if (!criterio) {
+                resultContainer.innerHTML = '';
+                return;
+            }
+            
+            resultContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #667eea;"><i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 10px;"></i><p style="margin-top: 10px;">Cargando datos...</p></div>';
+            
+            // Usar encodeURIComponent para codificar correctamente la URL
+            const urlCodificada = `/api/puntaje-criterio/${encodeURIComponent(criterio)}`;
+            
+            fetch(urlCodificada)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP Error: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.error) {
+                        resultContainer.innerHTML = `<div style="color: #dc3545; padding: 20px; background: #f8d7da; border-radius: 6px; border-left: 4px solid #dc3545;"><strong>Error:</strong> ${data.error}</div>`;
+                    } else {
+                        // Mostrar información del criterio con puntaje máximo
+                        const puntajeMaxStr = data.puntaje_maximo !== 'N/A' ? `Puntaje Máximo: <strong>${data.puntaje_maximo}</strong>` : 'Puntaje Máximo: N/A';
+                        const html = `
+                            <div class="criterio-info-header">
+                                <h3>${data.criterio}</h3>
+                                <div class="criterio-max">${puntajeMaxStr}</div>
+                            </div>
+                            <div style="overflow-x: auto;">
+                                ${data.tabla}
+                            </div>
+                        `;
+                        resultContainer.innerHTML = html;
+                    }
+                })
+                .catch(error => {
+                    resultContainer.innerHTML = `<div style="color: #dc3545; padding: 20px; background: #f8d7da; border-radius: 6px; border-left: 4px solid #dc3545;"><strong>Error:</strong> ${error.message}</div>`;
+                    console.error('Error:', error);
+                });
+        });
+
+        // Auto-refresh cada 30 segundos
+        setInterval(function() {
+            fetch(window.location.href)
+                .then(response => response.text())
+                .then(data => {
+                    var containers = document.querySelectorAll('.table-container');
+                    var newContainers = new DOMParser().parseFromString(data, 'text/html').querySelectorAll('.table-container');
+                    containers.forEach((container, index) => {
+                        if (newContainers[index]) {
+                            container.innerHTML = newContainers[index].innerHTML;
+                        }
+                    });
+                    
+                    // Actualizar tarjetas de stats
+                    var statsContainer = document.querySelector('.stats-container');
+                    var newStats = new DOMParser().parseFromString(data, 'text/html').querySelector('.stats-container');
+                    if (newStats) {
+                        statsContainer.innerHTML = newStats.innerHTML;
+                    }
+                });
+        }, 30000);
+    </script>
+</body>
+</html>
