@@ -586,8 +586,8 @@ with col3:
     """, unsafe_allow_html=True)
 
 # Tabs para diferentes vistas
-tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    ["📋 Control", "📋 Plan de Acción", "📈 Desempeño", "🔍 Análisis por Métrica", "📚 Métricas"]
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
+    ["📋 Control", "📋 Plan de Acción", "📈 Desempeño", "🔍 Análisis por Métrica", "📚 Métricas", "🎯 Niveles de Intensidad"]
 )
 
 # Tab 1: Datos de Control
@@ -775,6 +775,71 @@ with tab5:
         file_name=f"metricas_{datetime.now().strftime('%Y%m%d')}.csv",
         mime="text/csv"
     )
+
+# Tab 6: Niveles de Intensidad Sugeridos
+with tab6:
+    st.write("<h2 style='text-align: center;'>🎯 Niveles de Intensidad Sugeridos</h2>", unsafe_allow_html=True)
+    
+    # Crear columnas para los tres niveles
+    col_baja, col_media, col_alta = st.columns(3)
+    
+    # Nivel Baja
+    with col_baja:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 25px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-bottom: 20px; height: 100%; min-height: 400px;">
+            <h3 style="margin-top: 0; font-size: 1.8rem;">Baja</h3>
+            <hr style="border-color: rgba(255,255,255,0.3); margin: 15px 0;">
+            <div style="text-align: left; line-height: 1.8;">
+                <p><strong>📌 Feedback Semanal</strong></p>
+                <p style="margin-top: 15px;">• 1 feedback semanal</p>
+                <hr style="border-color: rgba(255,255,255,0.3); margin: 15px 0;">
+                <p><strong>🎧 Escucha Guiada</strong></p>
+                <p style="margin-top: 15px;">• 1 escucha guiada</p>
+                <hr style="border-color: rgba(255,255,255,0.3); margin: 15px 0;">
+                <p><strong>🎭 Roleplay</strong></p>
+                <p style="margin-top: 15px;">• Sin roleplay</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Nivel Media
+    with col_media:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%); padding: 25px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-bottom: 20px; height: 100%; min-height: 400px;">
+            <h3 style="margin-top: 0; font-size: 1.8rem;">Media</h3>
+            <hr style="border-color: rgba(255,255,255,0.3); margin: 15px 0;">
+            <div style="text-align: left; line-height: 1.8;">
+                <p><strong>📌 Feedback Semanal</strong></p>
+                <p style="margin-top: 15px;">• 2 feedbacks semanales</p>
+                <hr style="border-color: rgba(255,255,255,0.3); margin: 15px 0;">
+                <p><strong>🎧 Escucha Guiada</strong></p>
+                <p style="margin-top: 15px;">• 2 escuchas + checklist</p>
+                <hr style="border-color: rgba(255,255,255,0.3); margin: 15px 0;">
+                <p><strong>🎭 Roleplay</strong></p>
+                <p style="margin-top: 15px;">• 1 roleplay</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Nivel Alta
+    with col_alta:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%); padding: 25px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-bottom: 20px; height: 100%; min-height: 400px;">
+            <h3 style="margin-top: 0; font-size: 1.8rem;">Alta</h3>
+            <hr style="border-color: rgba(255,255,255,0.3); margin: 15px 0;">
+            <div style="text-align: left; line-height: 1.8;">
+                <p><strong>📌 Feedback Diario</strong></p>
+                <p style="margin-top: 15px;">• Feedback diario</p>
+                <hr style="border-color: rgba(255,255,255,0.3); margin: 15px 0;">
+                <p><strong>🎧 Escucha en Vivo</strong></p>
+                <p style="margin-top: 15px;">• Escucha + corrección en vivo</p>
+                <hr style="border-color: rgba(255,255,255,0.3); margin: 15px 0;">
+                <p><strong>🎭 Roleplay Constante</strong></p>
+                <p style="margin-top: 15px;">• Roleplay constante
+                <p style="margin-top: 8px;">• Seguimiento de speech</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 # Footer
 st.markdown("---")
