@@ -620,20 +620,28 @@ def generar_vista_semanal(df_progreso):
             # Calcular variación semanal
             vista_semanal = vista_semanal.sort_values(['Agente', 'Semana'])
             vista_semanal['Δ semanal (%)'] = vista_semanal.groupby('Agente')['Prom. Calidad (%)'].diff().round(2)
+            vista_semanal['Δ es_primera'] = vista_semanal['Δ semanal (%)'].isna()
             vista_semanal['Δ semanal (%)'] = vista_semanal['Δ semanal (%)'].fillna(0)
             
-            # Determinar estado
-            def obtener_estado(delta):
-                if pd.isna(delta) or delta == 0:
-                    return '🔴 Sin mejora'
+            # Determinar estado con mejor diferenciación
+            def obtener_estado(row):
+                delta = row['Δ semanal (%)']
+                es_primera = row['Δ es_primera']
+                
+                if es_primera:
+                    return '⭐ Primera evaluación'
                 elif delta >= 5:
                     return '🟢 Mejora significativa'
                 elif 1 <= delta < 5:
                     return '🟡 Mejora leve'
+                elif -1 < delta < 1 and delta != 0:
+                    return '⚪ Estable (cambio mínimo)'
+                elif delta == 0:
+                    return '⚪ Estable'
                 else:
-                    return '🔴 Sin mejora'
+                    return '🔴 Decremento'
             
-            vista_semanal['Estado'] = vista_semanal['Δ semanal (%)'].apply(obtener_estado)
+            vista_semanal['Estado'] = vista_semanal.apply(obtener_estado, axis=1)
             
             return vista_semanal
     except Exception as e:
@@ -814,7 +822,7 @@ with tab3:
             
             if not df_vista_semanal.empty:
                 # Crear tabla HTML mejorada para vista semanal
-                html_semanal = '<style>.tabla-progreso-semanal { width: 100%; border-collapse: collapse; margin: 15px 0; } .tabla-progreso-semanal thead { background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); color: white; } .tabla-progreso-semanal th { padding: 12px; text-align: center; font-weight: bold; } .tabla-progreso-semanal td { padding: 12px; border-bottom: 1px solid #ddd; } .tabla-progreso-semanal tbody tr:hover { background-color: #f5f5f5; } .estado-mejora-sig { color: #28a745; font-weight: bold; } .estado-mejora-leve { color: #fd7e14; font-weight: bold; } .estado-sin-mejora { color: #dc3545; font-weight: bold; } .agente-col { text-align: left; font-weight: 500; } .centro { text-align: center; }</style><table class="tabla-progreso-semanal"><thead><tr><th style="text-align: left;">👤 Agente</th><th class="centro">📅 Semana</th><th class="centro">📊 Evaluaciones</th><th class="centro">📈 Prom. Calidad</th><th class="centro">Δ Semanal</th><th class="centro">Estado</th></tr></thead><tbody>'
+                html_semanal = '<style>.tabla-progreso-semanal { width: 100%; border-collapse: collapse; margin: 15px 0; } .tabla-progreso-semanal thead { background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); color: white; } .tabla-progreso-semanal th { padding: 12px; text-align: center; font-weight: bold; } .tabla-progreso-semanal td { padding: 12px; border-bottom: 1px solid #ddd; } .tabla-progreso-semanal tbody tr:hover { background-color: #f5f5f5; cursor: pointer; } .estado-mejora-sig { color: #28a745; font-weight: bold; } .estado-mejora-leve { color: #fd7e14; font-weight: bold; } .estado-sin-mejora { color: #dc3545; font-weight: bold; } .estado-estable { color: #6c757d; font-weight: bold; } .estado-primera { color: #0dcaf0; font-weight: bold; } .agente-col { text-align: left; font-weight: 500; } .centro { text-align: center; }</style><table class="tabla-progreso-semanal"><thead><tr><th style="text-align: left;">👤 Agente</th><th class="centro">📅 Semana</th><th class="centro">📊 Evaluaciones</th><th class="centro">📈 Prom. Calidad</th><th class="centro">Δ Semanal</th><th class="centro">Estado</th><th class="centro">🔍 Detalles</th></tr></thead><tbody>'
                 
                 for idx, row in df_vista_semanal.iterrows():
                     agente = str(row['Agente']) if pd.notna(row['Agente']) else '-'
@@ -829,14 +837,88 @@ with tab3:
                         clase_estado = 'estado-mejora-sig'
                     elif '🟡' in estado:
                         clase_estado = 'estado-mejora-leve'
+                    elif '⚪' in estado:
+                        clase_estado = 'estado-estable'
+                    elif '⭐' in estado:
+                        clase_estado = 'estado-primera'
                     else:
                         clase_estado = 'estado-sin-mejora'
                     
-                    html_semanal += f'<tr><td class="agente-col">{agente}</td><td class="centro">{semana}</td><td class="centro">{evaluaciones}</td><td class="centro"><strong>{prom_calidad}</strong></td><td class="centro"><strong>{delta}</strong></td><td class="{clase_estado}">{estado}</td></tr>'
+                    html_semanal += f'<tr><td class="agente-col">{agente}</td><td class="centro">{semana}</td><td class="centro">{evaluaciones}</td><td class="centro"><strong>{prom_calidad}</strong></td><td class="centro"><strong>{delta}</strong></td><td class="{clase_estado}">{estado}</td><td class="centro">👇</td></tr>'
                 
                 html_semanal += '</tbody></table>'
                 st.markdown(html_semanal, unsafe_allow_html=True)
                 
+                st.markdown("---")
+                st.markdown("### 📋 Haz clic para ver detalles diarios de cada agente")
+                
+                # Crear expanders para cada agente de la vista semanal
+                agentes_unicos = df_vista_semanal['Agente'].unique()
+                
+                for agente in sorted(agentes_unicos):
+                    with st.expander(f"👤 {agente} - Ver evaluaciones diarias"):
+                        df_agente_diario = df_progreso[df_progreso['Agentes Zimach'] == agente].copy()
+                        
+                        if not df_agente_diario.empty:
+                            # Tabla de evaluaciones diarias
+                            html_diario = '<style>.tabla-diario { width: 100%; border-collapse: collapse; margin: 10px 0; } .tabla-diario thead { background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); color: white; } .tabla-diario th { padding: 10px; text-align: center; font-size: 12px; } .tabla-diario td { padding: 10px; border-bottom: 1px solid #ddd; text-align: center; font-size: 13px; } .tabla-diario tbody tr:hover { background-color: #f9f9f9; } .mejora { color: #28a745; font-weight: bold; } .estable { color: #6c757d; } .decremento { color: #dc3545; font-weight: bold; } .primera { color: #0dcaf0; font-weight: bold; } .agente-dia { text-align: left; font-weight: 500; }</style><table class="tabla-diario"><thead><tr><th>📅 Fecha</th><th>📊 Semana</th><th>% Calidad</th><th>Δ vs día anterior</th><th>Cambio (aumento/disminución)</th><th>Nota</th></tr></thead><tbody>'
+                            
+                            for idx, row in df_agente_diario.iterrows():
+                                fecha = row['Fecha'].strftime('%d/%m/%Y') if pd.notna(row['Fecha']) else '-'
+                                semana = f"Semana {int(row['Semana'])}" if pd.notna(row['Semana']) else '-'
+                                calidad = f"{row['Calidad (%)']:.1f}%" if pd.notna(row['Calidad (%)']) else '-'
+                                delta = row['Δ vs anterior'] if pd.notna(row['Δ vs anterior']) else 0
+                                delta_str = f"{delta:+.2f}%" if delta != 0 else "Sin cambio"
+                                
+                                # Determine la clase y nota
+                                if idx == 0 or pd.isna(row['Δ vs anterior']):
+                                    clase = 'primera'
+                                    nota = '⭐ Primera evaluación'
+                                elif delta > 0:
+                                    clase = 'mejora'
+                                    nota = f'✅ Mejoró {delta:.2f}%'
+                                elif delta == 0:
+                                    clase = 'estable'
+                                    nota = '➡️ Mantiene nivel'
+                                else:
+                                    clase = 'decremento'
+                                    nota = f'⚠️ Bajó {abs(delta):.2f}%'
+                                
+                                html_diario += f'<tr><td>{fecha}</td><td>{semana}</td><td><strong>{calidad}</strong></td><td class="{clase}"><strong>{delta_str}</strong></td><td class="{clase}">{delta_str}</td><td>{nota}</td></tr>'
+                            
+                            html_diario += '</tbody></table>'
+                            st.markdown(html_diario, unsafe_allow_html=True)
+                            
+                            # Estadísticas del agente
+                            col1, col2, col3, col4 = st.columns(4)
+                            with col1:
+                                st.metric("📊 Total Evaluaciones", len(df_agente_diario))
+                            with col2:
+                                prom = df_agente_diario['Calidad (%)'].mean()
+                                st.metric("📈 Promedio General", f"{prom:.1f}%")
+                            with col3:
+                                max_cal = df_agente_diario['Calidad (%)'].max()
+                                st.metric("⬆️ Máximo Alcanzado", f"{max_cal:.1f}%")
+                            with col4:
+                                min_cal = df_agente_diario['Calidad (%)'].min()
+                                st.metric("⬇️ Mínimo Registrado", f"{min_cal:.1f}%")
+                            
+                            # Gráfico de evolución
+                            st.subheader("📉 Gráfico de Evolución")
+                            import altair as alt
+                            
+                            chart = alt.Chart(df_agente_diario).mark_line(point=True, color='#667eea', size=3).encode(
+                                x=alt.X('Fecha:O', title='Fecha'),
+                                y=alt.Y('Calidad (%):Q', title='% Calidad', scale=alt.Scale(domain=[0, 100])),
+                                tooltip=['Fecha:O', 'Calidad (%):Q', 'Δ vs anterior:Q']
+                            ).properties(
+                                height=300,
+                                title=f'Evolución de {agente}'
+                            )
+                            
+                            st.altair_chart(chart, use_container_width=True)
+                
+                st.markdown("---")
                 # Descarga de datos
                 csv_vista_semanal = df_vista_semanal.to_csv(index=False).encode('utf-8')
                 st.download_button(
