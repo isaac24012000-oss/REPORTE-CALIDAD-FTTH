@@ -691,7 +691,7 @@ with col3:
 
 # Tabs para diferentes vistas
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(
-    ["📋 Control", "📋 Plan de Acción", "📈 Desempeño", "🔍 Análisis por Métrica", "📚 Métricas", "🎯 Niveles de Intensidad", "📊 Progreso por Fecha"]
+    ["📋 Control", "📋 Plan de Acción", "📈 Desempeño", "🔍 Análisis por Métrica", "📚 Métricas", "🎯 Niveles de Intensidad", "� Progreso de Plan"]
 )
 
 # Tab 1: Datos de Control
@@ -734,8 +734,122 @@ with tab2:
         mime="text/csv"
     )
 
-# Tab 3: Desempeño
+# Tab 3: Progreso de Plan
 with tab3:
+    st.write("<h2 style='text-align: center;'>📈 Progreso de Plan - Evolución de Desempeño</h2>", unsafe_allow_html=True)
+    
+    if df_progreso.empty:
+        st.warning("⚠️ No se encontraron datos en la hoja 'Progreso_Fecha'. Asegúrate de que la hoja existe y contiene datos.")
+    else:
+        # Crear pestañas dentro de tab3
+        tab3_diaria, tab3_semanal = st.tabs(["📅 Vista Diaria", "📈 Vista Semanal"])
+        
+        # Vista Diaria
+        with tab3_diaria:
+            st.subheader("Evolución Diaria de Calidad")
+            
+            # Seleccionar agente
+            agentes_disponibles = sorted(df_progreso['Agentes Zimach'].unique()) if 'Agentes Zimach' in df_progreso.columns else []
+            
+            if agentes_disponibles:
+                agente_seleccionado = st.selectbox("Selecciona un agente:", agentes_disponibles, key="agente_progreso_diaria")
+                
+                # Filtrar datos del agente
+                df_agente = df_progreso[df_progreso['Agentes Zimach'] == agente_seleccionado].copy()
+                
+                if not df_agente.empty:
+                    # Crear tabla HTML mejorada
+                    html_diaria = '<style>.tabla-progreso-diaria { width: 100%; border-collapse: collapse; margin: 15px 0; } .tabla-progreso-diaria thead { background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); color: white; } .tabla-progreso-diaria th { padding: 12px; text-align: center; font-weight: bold; } .tabla-progreso-diaria td { padding: 12px; border-bottom: 1px solid #ddd; text-align: center; } .tabla-progreso-diaria tbody tr:hover { background-color: #f5f5f5; } .mejora { color: #28a745; font-weight: bold; } .sin-cambio { color: #6c757d; } .decremento { color: #dc3545; font-weight: bold; } .baseline { color: #fd7e14; font-weight: bold; }</style><table class="tabla-progreso-diaria"><thead><tr><th>📅 Fecha</th><th>📊 Semana</th><th>% Calidad</th><th>Δ vs anterior</th><th>Estado de Progreso</th></tr></thead><tbody>'
+                    
+                    for idx, row in df_agente.iterrows():
+                        fecha = row['Fecha'].strftime('%d/%m/%Y') if pd.notna(row['Fecha']) else '-'
+                        semana = str(row['Semana']) if pd.notna(row['Semana']) else '-'
+                        calidad = str(row['Calidad (%)_str']) if pd.notna(row['Calidad (%)_str']) else '-'
+                        delta = str(row['Δ vs anterior_str']) if pd.notna(row['Δ vs anterior_str']) else '-'
+                        progreso = str(row['Progreso']) if pd.notna(row['Progreso']) else '-'
+                        
+                        # Determinar clase CSS para delta
+                        if delta == '-' or delta == 'Sin cambio':
+                            clase_delta = 'baseline'
+                        elif float(row['Δ vs anterior']) > 0 if pd.notna(row['Δ vs anterior']) else False:
+                            clase_delta = 'mejora'
+                        elif delta == '0%' or row['Δ vs anterior'] == 0:
+                            clase_delta = 'sin-cambio'
+                        else:
+                            clase_delta = 'decremento'
+                        
+                        html_diaria += f'<tr><td>{fecha}</td><td><strong>{semana}</strong></td><td><strong>{calidad}</strong></td><td class="{clase_delta}">{delta}</td><td>{progreso}</td></tr>'
+                    
+                    html_diaria += '</tbody></table>'
+                    st.markdown(html_diaria, unsafe_allow_html=True)
+                    
+                    # Gráfico de evolución
+                    if 'Calidad (%)' in df_agente.columns and 'Fecha' in df_agente.columns:
+                        st.subheader("Gráfico de Evolución")
+                        
+                        # Crear gráfico
+                        import altair as alt
+                        
+                        chart = alt.Chart(df_agente).mark_line(point=True, color='#667eea', size=3).encode(
+                            x=alt.X('Fecha:O', title='Fecha'),
+                            y=alt.Y('Calidad (%):Q', title='% Calidad', scale=alt.Scale(domain=[0, 100])),
+                            tooltip=['Fecha:O', 'Calidad (%):Q']
+                        ).properties(
+                            width=600,
+                            height=300,
+                            title='Evolución de Calidad del Agente'
+                        )
+                        
+                        st.altair_chart(chart, use_container_width=True)
+                    else:
+                        st.info(f"No hay datos disponibles para {agente_seleccionado}")
+                else:
+                    st.info(f"No hay datos disponibles para {agente_seleccionado}")
+            else:
+                st.warning("No se encontraron agentes con datos de progreso")
+        
+        # Vista Semanal
+        with tab3_semanal:
+            st.subheader("Resumen Semanal de Desempeño")
+            
+            if not df_vista_semanal.empty:
+                # Crear tabla HTML mejorada para vista semanal
+                html_semanal = '<style>.tabla-progreso-semanal { width: 100%; border-collapse: collapse; margin: 15px 0; } .tabla-progreso-semanal thead { background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); color: white; } .tabla-progreso-semanal th { padding: 12px; text-align: center; font-weight: bold; } .tabla-progreso-semanal td { padding: 12px; border-bottom: 1px solid #ddd; } .tabla-progreso-semanal tbody tr:hover { background-color: #f5f5f5; } .estado-mejora-sig { color: #28a745; font-weight: bold; } .estado-mejora-leve { color: #fd7e14; font-weight: bold; } .estado-sin-mejora { color: #dc3545; font-weight: bold; } .agente-col { text-align: left; font-weight: 500; } .centro { text-align: center; }</style><table class="tabla-progreso-semanal"><thead><tr><th style="text-align: left;">👤 Agente</th><th class="centro">📅 Semana</th><th class="centro">📊 Evaluaciones</th><th class="centro">📈 Prom. Calidad</th><th class="centro">Δ Semanal</th><th class="centro">Estado</th></tr></thead><tbody>'
+                
+                for idx, row in df_vista_semanal.iterrows():
+                    agente = str(row['Agente']) if pd.notna(row['Agente']) else '-'
+                    semana = str(row['Semana']) if pd.notna(row['Semana']) else '-'
+                    evaluaciones = int(row['Evaluaciones']) if pd.notna(row['Evaluaciones']) else 0
+                    prom_calidad = f"{row['Prom. Calidad (%)']:.1f}%" if pd.notna(row['Prom. Calidad (%)']) else '-'
+                    delta = f"{row['Δ semanal (%)']:.2f}%" if pd.notna(row['Δ semanal (%)']) else '-'
+                    estado = str(row['Estado'])
+                    
+                    # Determinar clase CSS para estado
+                    if '🟢' in estado:
+                        clase_estado = 'estado-mejora-sig'
+                    elif '🟡' in estado:
+                        clase_estado = 'estado-mejora-leve'
+                    else:
+                        clase_estado = 'estado-sin-mejora'
+                    
+                    html_semanal += f'<tr><td class="agente-col">{agente}</td><td class="centro">{semana}</td><td class="centro">{evaluaciones}</td><td class="centro"><strong>{prom_calidad}</strong></td><td class="centro"><strong>{delta}</strong></td><td class="{clase_estado}">{estado}</td></tr>'
+                
+                html_semanal += '</tbody></table>'
+                st.markdown(html_semanal, unsafe_allow_html=True)
+                
+                # Descarga de datos
+                csv_vista_semanal = df_vista_semanal.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Descargar Vista Semanal en CSV",
+                    data=csv_vista_semanal,
+                    file_name=f"progreso_semanal_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv"
+                )
+            else:
+                st.info("No hay datos semanales disponibles")
+
+# Tab 4: Desempeño
+with tab4:
     st.write("<h2 style='text-align: center;'>📈 Puntaje de Desempeño</h2>", unsafe_allow_html=True)
     st.dataframe(df_desempeño, width='stretch', height=400)
     
@@ -747,8 +861,8 @@ with tab3:
         mime="text/csv"
     )
 
-# Tab 4: Análisis por Métrica
-with tab4:
+# Tab 5: Análisis por Métrica
+with tab5:
     st.subheader("Análisis Detallado por Métrica")
     
     criterios_opciones = [
@@ -949,8 +1063,8 @@ with tab4:
                     mime="text/csv"
                 )
 
-# Tab 5: Leyenda de Métricas
-with tab5:
+# Tab 6: Leyenda de Métricas
+with tab6:
     st.subheader("Leyenda de Métricas - Criterios y Puntajes")
     st.info("Esta tabla muestra todos los criterios de evaluación, sus descripciones, puntajes máximos y la categoría a la que pertenecen.")
     st.dataframe(df_metricas, width='stretch', height=600)
@@ -963,8 +1077,8 @@ with tab5:
         mime="text/csv"
     )
 
-# Tab 6: Niveles de Intensidad Sugeridos
-with tab6:
+# Tab 7: Niveles de Intensidad Sugeridos
+with tab7:
     st.write("<h2 style='text-align: center;'>🎯 Niveles de Intensidad Sugeridos</h2>", unsafe_allow_html=True)
     
     # Crear columnas para los tres niveles
@@ -1027,120 +1141,6 @@ with tab6:
             </div>
         </div>
         """, unsafe_allow_html=True)
-
-# Tab 7: Progreso por Fecha
-with tab7:
-    st.write("<h2 style='text-align: center;'>📊 Evolución de Desempeño por Fecha y Semana</h2>", unsafe_allow_html=True)
-    
-    if df_progreso.empty:
-        st.warning("⚠️ No se encontraron datos en la hoja 'Progreso_Fecha'. Asegúrate de que la hoja existe y contiene datos.")
-    else:
-        # Crear pestañas dentro de tab7
-        tab7_diaria, tab7_semanal = st.tabs(["📅 Vista Diaria", "📈 Vista Semanal"])
-        
-        # Vista Diaria
-        with tab7_diaria:
-            st.subheader("Evolución Diaria de Calidad")
-            
-            # Seleccionar agente
-            agentes_disponibles = sorted(df_progreso['Agentes Zimach'].unique()) if 'Agentes Zimach' in df_progreso.columns else []
-            
-            if agentes_disponibles:
-                agente_seleccionado = st.selectbox("Selecciona un agente:", agentes_disponibles, key="agente_progreso_diaria")
-                
-                # Filtrar datos del agente
-                df_agente = df_progreso[df_progreso['Agentes Zimach'] == agente_seleccionado].copy()
-                
-                if not df_agente.empty:
-                    # Crear tabla HTML mejorada
-                    html_diaria = '<style>.tabla-progreso-diaria { width: 100%; border-collapse: collapse; margin: 15px 0; } .tabla-progreso-diaria thead { background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); color: white; } .tabla-progreso-diaria th { padding: 12px; text-align: center; font-weight: bold; } .tabla-progreso-diaria td { padding: 12px; border-bottom: 1px solid #ddd; text-align: center; } .tabla-progreso-diaria tbody tr:hover { background-color: #f5f5f5; } .mejora { color: #28a745; font-weight: bold; } .sin-cambio { color: #6c757d; } .decremento { color: #dc3545; font-weight: bold; } .baseline { color: #fd7e14; font-weight: bold; }</style><table class="tabla-progreso-diaria"><thead><tr><th>📅 Fecha</th><th>📊 Semana</th><th>% Calidad</th><th>Δ vs anterior</th><th>Estado de Progreso</th></tr></thead><tbody>'
-                    
-                    for idx, row in df_agente.iterrows():
-                        fecha = row['Fecha'].strftime('%d/%m/%Y') if pd.notna(row['Fecha']) else '-'
-                        semana = str(row['Semana']) if pd.notna(row['Semana']) else '-'
-                        calidad = str(row['Calidad (%)_str']) if pd.notna(row['Calidad (%)_str']) else '-'
-                        delta = str(row['Δ vs anterior_str']) if pd.notna(row['Δ vs anterior_str']) else '-'
-                        progreso = str(row['Progreso']) if pd.notna(row['Progreso']) else '-'
-                        
-                        # Determinar clase CSS para delta
-                        if delta == '-' or delta == 'Sin cambio':
-                            clase_delta = 'baseline'
-                        elif float(row['Δ vs anterior']) > 0 if pd.notna(row['Δ vs anterior']) else False:
-                            clase_delta = 'mejora'
-                        elif delta == '0%' or row['Δ vs anterior'] == 0:
-                            clase_delta = 'sin-cambio'
-                        else:
-                            clase_delta = 'decremento'
-                        
-                        html_diaria += f'<tr><td>{fecha}</td><td><strong>{semana}</strong></td><td><strong>{calidad}</strong></td><td class="{clase_delta}">{delta}</td><td>{progreso}</td></tr>'
-                    
-                    html_diaria += '</tbody></table>'
-                    st.markdown(html_diaria, unsafe_allow_html=True)
-                    
-                    # Gráfico de evolución
-                    if 'Calidad (%)' in df_agente.columns and 'Fecha' in df_agente.columns:
-                        st.subheader("Gráfico de Evolución")
-                        
-                        # Crear gráfico
-                        import altair as alt
-                        
-                        chart = alt.Chart(df_agente).mark_line(point=True, color='#667eea', size=3).encode(
-                            x=alt.X('Fecha:O', title='Fecha'),
-                            y=alt.Y('Calidad (%):Q', title='% Calidad', scale=alt.Scale(domain=[0, 100])),
-                            tooltip=['Fecha:O', 'Calidad (%):Q']
-                        ).properties(
-                            width=600,
-                            height=300,
-                            title='Evolución de Calidad del Agente'
-                        )
-                        
-                        st.altair_chart(chart, use_container_width=True)
-                    else:
-                        st.info(f"No hay datos disponibles para {agente_seleccionado}")
-                else:
-                    st.info(f"No hay datos disponibles para {agente_seleccionado}")
-            else:
-                st.warning("No se encontraron agentes con datos de progreso")
-        
-        # Vista Semanal
-        with tab7_semanal:
-            st.subheader("Resumen Semanal de Desempeño")
-            
-            if not df_vista_semanal.empty:
-                # Crear tabla HTML mejorada para vista semanal
-                html_semanal = '<style>.tabla-progreso-semanal { width: 100%; border-collapse: collapse; margin: 15px 0; } .tabla-progreso-semanal thead { background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); color: white; } .tabla-progreso-semanal th { padding: 12px; text-align: center; font-weight: bold; } .tabla-progreso-semanal td { padding: 12px; border-bottom: 1px solid #ddd; } .tabla-progreso-semanal tbody tr:hover { background-color: #f5f5f5; } .estado-mejora-sig { color: #28a745; font-weight: bold; } .estado-mejora-leve { color: #fd7e14; font-weight: bold; } .estado-sin-mejora { color: #dc3545; font-weight: bold; } .agente-col { text-align: left; font-weight: 500; } .centro { text-align: center; }</style><table class="tabla-progreso-semanal"><thead><tr><th style="text-align: left;">👤 Agente</th><th class="centro">📅 Semana</th><th class="centro">📊 Evaluaciones</th><th class="centro">📈 Prom. Calidad</th><th class="centro">Δ Semanal</th><th class="centro">Estado</th></tr></thead><tbody>'
-                
-                for idx, row in df_vista_semanal.iterrows():
-                    agente = str(row['Agente']) if pd.notna(row['Agente']) else '-'
-                    semana = str(row['Semana']) if pd.notna(row['Semana']) else '-'
-                    evaluaciones = int(row['Evaluaciones']) if pd.notna(row['Evaluaciones']) else 0
-                    prom_calidad = f"{row['Prom. Calidad (%)']:.1f}%" if pd.notna(row['Prom. Calidad (%)']) else '-'
-                    delta = f"{row['Δ semanal (%)']:.2f}%" if pd.notna(row['Δ semanal (%)']) else '-'
-                    estado = str(row['Estado'])
-                    
-                    # Determinar clase CSS para estado
-                    if '🟢' in estado:
-                        clase_estado = 'estado-mejora-sig'
-                    elif '🟡' in estado:
-                        clase_estado = 'estado-mejora-leve'
-                    else:
-                        clase_estado = 'estado-sin-mejora'
-                    
-                    html_semanal += f'<tr><td class="agente-col">{agente}</td><td class="centro">{semana}</td><td class="centro">{evaluaciones}</td><td class="centro"><strong>{prom_calidad}</strong></td><td class="centro"><strong>{delta}</strong></td><td class="{clase_estado}">{estado}</td></tr>'
-                
-                html_semanal += '</tbody></table>'
-                st.markdown(html_semanal, unsafe_allow_html=True)
-                
-                # Descarga de datos
-                csv_vista_semanal = df_vista_semanal.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📥 Descargar Vista Semanal en CSV",
-                    data=csv_vista_semanal,
-                    file_name=f"progreso_semanal_{datetime.now().strftime('%Y%m%d')}.csv",
-                    mime="text/csv"
-                )
-            else:
-                st.info("No hay datos semanales disponibles")
 
 # Footer
 st.markdown("---")
