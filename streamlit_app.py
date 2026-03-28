@@ -553,8 +553,29 @@ def cargar_datos_progreso():
         if '% calidad' in df.columns:
             df['Calidad (%)'] = (df['% calidad'] * 100).round(1)
         
-        # Calcular semana del mes
-        df['Semana'] = df['Fecha'].dt.day.apply(lambda x: f'Semana {(x-1)//7 + 1}' if pd.notna(x) else 'N/A')
+        # Calcular/convertir semana del mes a número
+        def extraer_numero_semana(x):
+            """Extrae el número de semana de cualquier formato"""
+            if pd.isna(x):
+                return None
+            # Si es string como "Semana 4", extrae el número
+            if isinstance(x, str):
+                import re
+                match = re.search(r'\d+', x)
+                if match:
+                    return int(match.group())
+            # Si es número, devuélvelo como int
+            try:
+                return int(x)
+            except:
+                pass
+            return None
+        
+        # Si existe columna Semana, convertirla a número; si no, calcularla
+        if 'Semana' in df.columns:
+            df['Semana'] = df['Semana'].apply(extraer_numero_semana)
+        else:
+            df['Semana'] = df['Fecha'].dt.day.apply(lambda x: int((x-1)//7 + 1) if pd.notna(x) else None)
         
         # Ordena por agente y fecha para calcular progreso
         df = df.sort_values(['Agentes Zimach', 'Fecha'])
@@ -821,35 +842,6 @@ with tab3:
             st.subheader("Resumen Semanal de Desempeño")
             
             if not df_vista_semanal.empty:
-                # Crear tabla HTML mejorada para vista semanal
-                html_semanal = '<style>.tabla-progreso-semanal { width: 100%; border-collapse: collapse; margin: 15px 0; } .tabla-progreso-semanal thead { background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); color: white; } .tabla-progreso-semanal th { padding: 12px; text-align: center; font-weight: bold; } .tabla-progreso-semanal td { padding: 12px; border-bottom: 1px solid #ddd; } .tabla-progreso-semanal tbody tr:hover { background-color: #f5f5f5; cursor: pointer; } .estado-mejora-sig { color: #28a745; font-weight: bold; } .estado-mejora-leve { color: #fd7e14; font-weight: bold; } .estado-sin-mejora { color: #dc3545; font-weight: bold; } .estado-estable { color: #6c757d; font-weight: bold; } .estado-primera { color: #0dcaf0; font-weight: bold; } .agente-col { text-align: left; font-weight: 500; } .centro { text-align: center; }</style><table class="tabla-progreso-semanal"><thead><tr><th style="text-align: left;">👤 Agente</th><th class="centro">📅 Semana</th><th class="centro">📊 Evaluaciones</th><th class="centro">📈 Prom. Calidad</th><th class="centro">Δ Semanal</th><th class="centro">Estado</th><th class="centro">🔍 Detalles</th></tr></thead><tbody>'
-                
-                for idx, row in df_vista_semanal.iterrows():
-                    agente = str(row['Agente']) if pd.notna(row['Agente']) else '-'
-                    semana = str(row['Semana']) if pd.notna(row['Semana']) else '-'
-                    evaluaciones = int(row['Evaluaciones']) if pd.notna(row['Evaluaciones']) else 0
-                    prom_calidad = f"{row['Prom. Calidad (%)']:.1f}%" if pd.notna(row['Prom. Calidad (%)']) else '-'
-                    delta = f"{row['Δ semanal (%)']:.2f}%" if pd.notna(row['Δ semanal (%)']) else '-'
-                    estado = str(row['Estado'])
-                    
-                    # Determinar clase CSS para estado
-                    if '🟢' in estado:
-                        clase_estado = 'estado-mejora-sig'
-                    elif '🟡' in estado:
-                        clase_estado = 'estado-mejora-leve'
-                    elif '⚪' in estado:
-                        clase_estado = 'estado-estable'
-                    elif '⭐' in estado:
-                        clase_estado = 'estado-primera'
-                    else:
-                        clase_estado = 'estado-sin-mejora'
-                    
-                    html_semanal += f'<tr><td class="agente-col">{agente}</td><td class="centro">{semana}</td><td class="centro">{evaluaciones}</td><td class="centro"><strong>{prom_calidad}</strong></td><td class="centro"><strong>{delta}</strong></td><td class="{clase_estado}">{estado}</td><td class="centro">👇</td></tr>'
-                
-                html_semanal += '</tbody></table>'
-                st.markdown(html_semanal, unsafe_allow_html=True)
-                
-                st.markdown("---")
                 st.markdown("### 📋 Haz clic para ver detalles diarios de cada agente")
                 
                 # Crear expanders para cada agente de la vista semanal
@@ -871,7 +863,7 @@ with tab3:
                                 delta_str = f"{delta:+.2f}%" if delta != 0 else "Sin cambio"
                                 
                                 # Determine la clase y nota
-                                if idx == 0 or pd.isna(row['Δ vs anterior']):
+                                if pd.isna(row['Δ vs anterior']):
                                     clase = 'primera'
                                     nota = '⭐ Primera evaluación'
                                 elif delta > 0:
