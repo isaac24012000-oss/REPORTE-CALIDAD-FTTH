@@ -895,6 +895,17 @@ with tab3:
                                 min_cal = df_agente_diario['Calidad (%)'].min()
                                 st.metric("⬇️ Mínimo Registrado", f"{min_cal:.1f}%")
                             
+                            # Interpretación del progreso
+                            st.markdown("""
+                            <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 20px; border-radius: 10px; margin: 20px 0; border-left: 5px solid #667eea;">
+                            <h3 style="margin-top: 0; color: #2c3e50;">🔷 Interpretación del Progreso</h3>
+                            <p style="margin: 10px 0; color: #34495e;"><strong>🟢 Mejora significativa:</strong> incremento sostenido +5% o más</p>
+                            <p style="margin: 10px 0; color: #34495e;"><strong>🟡 Mejora leve:</strong> avance puntual con estabilidad +1% a +4%</p>
+                            <p style="margin: 10px 0; color: #34495e;"><strong>🔴 Sin mejora:</strong> estancamiento o sin variación -0% (variaciones entre -0.99% y 0%)</p>
+                            <p style="margin: 10px 0; color: #34495e;"><strong>⚪ Estable:</strong> cambio mínimo, mantiene su nivel de desempeño</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
                             # Gráfico de evolución
                             st.subheader("📉 Gráfico de Evolución")
                             import altair as alt
