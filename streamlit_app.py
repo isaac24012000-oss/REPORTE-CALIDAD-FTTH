@@ -189,7 +189,6 @@ def aplicar_colores_df(df):
 COLUMNAS_MOSTRAR = [
     'Agentes Zimach',
     'Sale Conv %',
-    '% calidad',
     'Intensidad',
     'Meta S1',
     'Meta S2',
@@ -219,7 +218,6 @@ def cargar_datos():
     df_filtrado.columns = [
         'Agentes Zimach',
         'Sale Conv %',
-        '% Calidad',
         'Intensidad',
         'Meta S1',
         'Meta S2',
@@ -243,7 +241,6 @@ def cargar_datos():
     # Convertir columnas numéricas a porcentaje
     columnas_porcentaje = [
         'Sale Conv %',
-        '% Calidad',
         'Intensidad',
         'Meta S1',
         'Meta S2',
@@ -669,6 +666,47 @@ def generar_vista_semanal(df_progreso):
         st.warning(f"Error al procesar vista semanal: {str(e)}")
         return pd.DataFrame()
 
+@st.cache_data
+def calcular_resumen_progreso_agentes(df_progreso):
+    """Calcula promedio de calidad, variación promedio y estado de progreso por agente"""
+    if df_progreso.empty:
+        return pd.DataFrame()
+    
+    try:
+        resumen = []
+        agentes_unicos = df_progreso['Agentes Zimach'].unique()
+        
+        for agente in agentes_unicos:
+            df_agente = df_progreso[df_progreso['Agentes Zimach'] == agente]
+            
+            # Promedio de calidad
+            prom_calidad = df_agente['Calidad (%)'].mean()
+            
+            # Delta promedio (solo deltas válidos, no NaN)
+            deltas_validos = df_agente[df_agente['Δ vs anterior'].notna()]['Δ vs anterior'].values
+            delta_promedio = deltas_validos.mean() if len(deltas_validos) > 0 else 0
+            
+            # Clasificación de progreso
+            if delta_promedio >= 5:
+                estado = '🟢 Mejora significativa'
+            elif 1 <= delta_promedio < 5:
+                estado = '🟡 Mejora leve'
+            elif -1 < delta_promedio <= 0:
+                estado = '⚪ Estable'
+            else:
+                estado = '🔴 Decremento'
+            
+            resumen.append({
+                'Agentes Zimach': agente,
+                'Prom. Calidad': f'{prom_calidad:.1f}%',
+                'Var. Progreso': f'{delta_promedio:+.2f}%',
+                'Interpretación': estado
+            })
+        
+        return pd.DataFrame(resumen)
+    except Exception as e:
+        return pd.DataFrame()
+
 # Cargar datos
 df_data = cargar_datos()
 df_couching = cargar_datos_couching()
@@ -677,6 +715,7 @@ df_metricas = cargar_datos_metricas()
 df_progreso = cargar_datos_progreso()
 df_progreso_procesado = procesar_datos_progreso(df_progreso)
 df_vista_semanal = generar_vista_semanal(df_progreso_procesado)
+df_resumen_progreso = calcular_resumen_progreso_agentes(df_progreso_procesado)
 
 # Cálculos para estadísticas
 excel_file = 'CONTROL DE AUDITORIAS.xlsx'
@@ -727,8 +766,31 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(
 with tab1:
     st.write("<h2 style='text-align: center;'>📋 Control de Auditorías</h2>", unsafe_allow_html=True)
     
+    # Combinar datos de control con resumen de progreso
+    df_control_mejorado = df_data.copy()
+    
+    # Hacer merge con el resumen de progreso
+    if not df_resumen_progreso.empty:
+        df_control_mejorado = df_control_mejorado.merge(
+            df_resumen_progreso[['Agentes Zimach', 'Prom. Calidad', 'Var. Progreso', 'Interpretación']],
+            on='Agentes Zimach',
+            how='left'
+        )
+        
+        # Reordenar columnas para que Prom. Calidad esté en lugar de % Calidad
+        if 'Sale Conv %' in df_control_mejorado.columns:
+            columnas_nuevo_orden = ['Agentes Zimach', 'Sale Conv %', 'Prom. Calidad', 'Var. Progreso', 'Interpretación']
+            
+            # Agregar el resto de columnas que no estén en el nuevo orden
+            resto_columnas = [col for col in df_control_mejorado.columns if col not in columnas_nuevo_orden]
+            columnas_final = columnas_nuevo_orden + resto_columnas
+            
+            # Mantener solo las columnas que existan
+            columnas_final = [col for col in columnas_final if col in df_control_mejorado.columns]
+            df_control_mejorado = df_control_mejorado[columnas_final]
+    
     # Aplicar colores al DataFrame
-    df_coloreado = aplicar_colores_df(df_data)
+    df_coloreado = aplicar_colores_df(df_control_mejorado)
     
     # Convertir a HTML con colores
     html_tabla = df_coloreado.to_html(escape=False, index=False)
@@ -742,7 +804,7 @@ with tab1:
     st.markdown(html_tabla, unsafe_allow_html=True)
     
     # Descargar datos
-    csv_data = df_data.to_csv(index=False).encode('utf-8')
+    csv_data = df_control_mejorado.to_csv(index=False).encode('utf-8')
     st.download_button(
         label="📥 Descargar Control en CSV",
         data=csv_data,
