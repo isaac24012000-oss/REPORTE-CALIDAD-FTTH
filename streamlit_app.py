@@ -895,16 +895,46 @@ with tab3:
                                 min_cal = df_agente_diario['Calidad (%)'].min()
                                 st.metric("⬇️ Mínimo Registrado", f"{min_cal:.1f}%")
                             
-                            # Interpretación del progreso
-                            st.markdown("""
-                            <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 20px; border-radius: 10px; margin: 20px 0; border-left: 5px solid #667eea;">
-                            <h3 style="margin-top: 0; color: #2c3e50;">🔷 Interpretación del Progreso</h3>
-                            <p style="margin: 10px 0; color: #34495e;"><strong>🟢 Mejora significativa:</strong> incremento sostenido +5% o más</p>
-                            <p style="margin: 10px 0; color: #34495e;"><strong>🟡 Mejora leve:</strong> avance puntual con estabilidad +1% a +4%</p>
-                            <p style="margin: 10px 0; color: #34495e;"><strong>🔴 Sin mejora:</strong> estancamiento o sin variación -0% (variaciones entre -0.99% y 0%)</p>
-                            <p style="margin: 10px 0; color: #34495e;"><strong>⚪ Estable:</strong> cambio mínimo, mantiene su nivel de desempeño</p>
-                            </div>
-                            """, unsafe_allow_html=True)
+                            # Calcular delta promedio para interpretar el resultado
+                            deltas_validos = df_agente_diario[df_agente_diario['Δ vs anterior'].notna()]['Δ vs anterior'].values
+                            
+                            if len(deltas_validos) > 0:
+                                delta_promedio = deltas_validos.mean()
+                                
+                                # Determinar clasificación y mostrar recomendación
+                                if delta_promedio >= 5:
+                                    color_bg = "#d4edda"
+                                    color_border = "#28a745"
+                                    icono = "🟢"
+                                    titulo = "Mejora Significativa"
+                                    recomendacion = f"¡Excelente! {agente} está demostrando un incremento sostenido de <strong>+{delta_promedio:.2f}%</strong> en su desempeño. Continúa con las estrategias actuales de coaching. Se recomienda evaluar qué está funcionando bien y replicarlo en otras áreas."
+                                elif 1 <= delta_promedio < 5:
+                                    color_bg = "#fff3cd"
+                                    color_border = "#ffc107"
+                                    icono = "🟡"
+                                    titulo = "Mejora Leve"
+                                    recomendacion = f"{agente} está avanzando con una mejora leve de <strong>+{delta_promedio:.2f}%</strong>. Se recomienda intensificar el coaching enfocándose en las áreas críticas. Realiza feedback más frecuentes y establece objetivos más claros."
+                                elif -1 < delta_promedio <= 0:
+                                    color_bg = "#f8f9fa"
+                                    color_border = "#6c757d"
+                                    icono = "⚪"
+                                    titulo = "Estable"
+                                    recomendacion = f"{agente} está manteniendo su nivel con cambios mínimos de <strong>{delta_promedio:.2f}%</strong>. Analiza si necesita más apoyo o nuevas estrategias de coaching para generar impulso."
+                                else:
+                                    color_bg = "#f8d7da"
+                                    color_border = "#dc3545"
+                                    icono = "🔴"
+                                    titulo = "Sin Mejora"
+                                    recomendacion = f"{agente} presenta un decremento de <strong>{delta_promedio:.2f}%</strong>. Se requiere intervención inmediata. Realiza una evaluación profunda de barreras, aumenta la frecuencia de coaching y considera coaching intensivo."
+                                
+                                st.markdown(f"""
+                                <div style="background: {color_bg}; padding: 20px; border-radius: 10px; margin: 20px 0; border-left: 5px solid {color_border};">
+                                <h3 style="margin-top: 0; color: #2c3e50;">{icono} {titulo}</h3>
+                                <p style="margin: 10px 0; color: #34495e; font-size: 16px;">{recomendacion}</p>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            else:
+                                st.info("⏳ Se necesitan al menos 2 evaluaciones para calcular el progreso.")
                             
                             # Gráfico de evolución
                             st.subheader("📉 Gráfico de Evolución")
