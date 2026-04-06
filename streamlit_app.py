@@ -132,6 +132,24 @@ def encuentra_archivo_excel(filename):
     
     return None
 
+def descargar_de_github(filename, token=None):
+    """Descarga un archivo de GitHub como última opción"""
+    try:
+        import urllib.request
+        
+        # URLs del repositorio
+        raw_url = f"https://raw.githubusercontent.com/isaac24012000-oss/REPORTE-CALIDAD-FTTH/main/{filename}"
+        
+        # Crear temporalmente el archivo
+        current_dir = os.getcwd()
+        filepath = os.path.join(current_dir, filename)
+        
+        # Descargar
+        urllib.request.urlretrieve(raw_url, filepath)
+        return filepath
+    except Exception as e:
+        return None
+
 # Funciones para colorear valores
 def colorear_impacto_desviacion(val):
     """Colorea valores de Impacto y Desviación: rojo si negativo, verde si positivo"""
@@ -755,6 +773,11 @@ def cargar_datos_control_calidad():
     """Carga los datos de Control de Calidad del archivo REPORTE CALIDAD.xlsx"""
     try:
         excel_file = encuentra_archivo_excel('REPORTE CALIDAD.xlsx')
+        
+        if excel_file is None:
+            # Intentar descargar de GitHub como última opción
+            with st.spinner("📥 Descargando archivo de GitHub..."):
+                excel_file = descargar_de_github('REPORTE CALIDAD.xlsx')
         
         if excel_file is None:
             # Mostrar información de depuración
