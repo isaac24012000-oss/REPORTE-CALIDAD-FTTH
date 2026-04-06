@@ -102,6 +102,21 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Función auxiliar para encontrar archivos Excel
+def encuentra_archivo_excel(filename):
+    """Busca un archivo Excel en múltiples ubicaciones posibles"""
+    possible_paths = [
+        filename,  # Ruta relativa simple
+        os.path.join(os.getcwd(), filename),  # Directorio actual
+        os.path.join(os.path.dirname(__file__), filename),  # Directorio del script
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+    
+    return None
+
 # Funciones para colorear valores
 def colorear_impacto_desviacion(val):
     """Colorea valores de Impacto y Desviación: rojo si negativo, verde si positivo"""
@@ -209,7 +224,9 @@ COLUMNAS_COUCHING = [
 @st.cache_data
 def cargar_datos():
     """Carga los datos del Excel"""
-    excel_file = 'CONTROL DE AUDITORIAS.xlsx'
+    excel_file = encuentra_archivo_excel('CONTROL DE AUDITORIAS.xlsx')
+    if excel_file is None:
+        return pd.DataFrame()
     df = pd.read_excel(excel_file, sheet_name='Data')
     
     # Seleccionar solo las columnas deseadas
@@ -277,7 +294,9 @@ def cargar_datos():
 @st.cache_data
 def cargar_datos_couching():
     """Carga los datos de Couching del Excel"""
-    excel_file = 'CONTROL DE AUDITORIAS.xlsx'
+    excel_file = encuentra_archivo_excel('CONTROL DE AUDITORIAS.xlsx')
+    if excel_file is None:
+        return pd.DataFrame()
     df = pd.read_excel(excel_file, sheet_name='Couching')
     
     # Seleccionar solo las columnas deseadas
@@ -327,7 +346,9 @@ def cargar_datos_couching():
 @st.cache_data
 def cargar_datos_metricas():
     """Carga y estructura los datos de la hoja Metricas"""
-    excel_file = 'CONTROL DE AUDITORIAS.xlsx'
+    excel_file = encuentra_archivo_excel('CONTROL DE AUDITORIAS.xlsx')
+    if excel_file is None:
+        return pd.DataFrame()
     
     # Mapeo manual de criterios con sus descripciones y puntajes
     metricas_datos = {
@@ -446,7 +467,9 @@ def cargar_datos_metricas():
 @st.cache_data
 def calcular_puntaje_desempeño():
     """Calcula el puntaje y porcentaje de desempeño para cada agente"""
-    excel_file = 'CONTROL DE AUDITORIAS.xlsx'
+    excel_file = encuentra_archivo_excel('CONTROL DE AUDITORIAS.xlsx')
+    if excel_file is None:
+        return pd.DataFrame()
     df_couching = pd.read_excel(excel_file, sheet_name='Couching')
     
     # Criterios evaluables
@@ -541,7 +564,9 @@ def calcular_puntaje_desempeño():
 def cargar_datos_progreso():
     """Carga los datos de Progreso por Fecha del Excel"""
     try:
-        excel_file = 'CONTROL DE AUDITORIAS.xlsx'
+        excel_file = encuentra_archivo_excel('CONTROL DE AUDITORIAS.xlsx')
+        if excel_file is None:
+            return pd.DataFrame()
         df = pd.read_excel(excel_file, sheet_name='Progreso_Fecha')
         
         # Convertir columnas necesarias
@@ -712,9 +737,12 @@ def calcular_resumen_progreso_agentes(df_progreso):
 def cargar_datos_control_calidad():
     """Carga los datos de Control de Calidad del archivo REPORTE CALIDAD.xlsx"""
     try:
-        # Obtener el directorio del script actual
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        excel_file = os.path.join(script_dir, 'REPORTE CALIDAD.xlsx')
+        excel_file = encuentra_archivo_excel('REPORTE CALIDAD.xlsx')
+        
+        if excel_file is None:
+            st.error("No se encontró el archivo REPORTE CALIDAD.xlsx")
+            return pd.DataFrame()
+        
         df = pd.read_excel(excel_file, sheet_name=0)
         
         # Contar leads por agente
@@ -772,13 +800,18 @@ df_resumen_progreso = calcular_resumen_progreso_agentes(df_progreso_procesado)
 df_control_calidad = cargar_datos_control_calidad()
 
 # Cálculos para estadísticas
-excel_file = 'CONTROL DE AUDITORIAS.xlsx'
-df_raw = pd.read_excel(excel_file, sheet_name='Data')
-df_raw_filtrado = df_raw[df_raw['Agentes Zimach'].astype(str).str.contains('ZIM_', case=False, na=False)]
+excel_file = encuentra_archivo_excel('CONTROL DE AUDITORIAS.xlsx')
+if excel_file:
+    df_raw = pd.read_excel(excel_file, sheet_name='Data')
+    df_raw_filtrado = df_raw[df_raw['Agentes Zimach'].astype(str).str.contains('ZIM_', case=False, na=False)]
 
-total_agentes = len(df_data)
-conv_promedio = df_raw_filtrado['Sale Conv %'].mean() * 100
-calidad_promedio = df_raw_filtrado['% calidad'].mean() * 100
+    total_agentes = len(df_data)
+    conv_promedio = df_raw_filtrado['Sale Conv %'].mean() * 100
+    calidad_promedio = df_raw_filtrado['% calidad'].mean() * 100
+else:
+    total_agentes = 0
+    conv_promedio = 0
+    calidad_promedio = 0
 
 # Header
 st.markdown("## 📊 Dashboard - Control de Auditorías")
@@ -1122,40 +1155,43 @@ with tab5:
     
     if criterio_seleccionado:
         # Buscar en la hoja Couching
-        excel_file = 'CONTROL DE AUDITORIAS.xlsx'
-        df_couching_raw = pd.read_excel(excel_file, sheet_name='Couching')
-        
-        # Buscar la columna exacta
-        criterio_columna = None
-        for col in df_couching_raw.columns:
-            if col.strip() == criterio_seleccionado.strip():
-                criterio_columna = col
-                break
-        
-        if criterio_columna:
-            puntos_maximos = {
-                'Presentaciòn': 1,
-                'Expresion Verbal / Diccion ': 4,
-                'Tiempo de Espera': 3,
-                'Validación de titular / contacto correcto': 2,
-                'Sondeo Asertivo ': 5,
-                'Identificación de necesidad': 7,
-                'Identificación de capacidad de pago / interés real': 4,
-                'Detección de decisor (titular o no)': 4,
-                'Escucha Activa': 7,
-                'Manejo de llamada': 12,
-                'Seguridad ': 5,
-                'Empatìa ': 8,
-                'Negocacion escalonada': 8,
-                'Beneficios claros': 8,
-                'Diferenciación vs competencia': 5,
-                'Personalización del discurso según necesidad': 7,
-                'Generación de urgencia': 5,
-                'Registro correcto en sistema ': 3,
-                'Uso adecuado de etiquetas': 2
-            }
+        excel_file = encuentra_archivo_excel('CONTROL DE AUDITORIAS.xlsx')
+        if excel_file is None:
+            st.error("No se encontró el archivo CONTROL DE AUDITORIAS.xlsx")
+        else:
+            df_couching_raw = pd.read_excel(excel_file, sheet_name='Couching')
             
-            puntaje_maximo = puntos_maximos.get(criterio_seleccionado, 'N/A')
+            # Buscar la columna exacta
+            criterio_columna = None
+            for col in df_couching_raw.columns:
+                if col.strip() == criterio_seleccionado.strip():
+                    criterio_columna = col
+                    break
+            
+            if criterio_columna:
+                puntos_maximos = {
+                    'Presentaciòn': 1,
+                    'Expresion Verbal / Diccion ': 4,
+                    'Tiempo de Espera': 3,
+                    'Validación de titular / contacto correcto': 2,
+                    'Sondeo Asertivo ': 5,
+                    'Identificación de necesidad': 7,
+                    'Identificación de capacidad de pago / interés real': 4,
+                    'Detección de decisor (titular o no)': 4,
+                    'Escucha Activa': 7,
+                    'Manejo de llamada': 12,
+                    'Seguridad ': 5,
+                    'Empatìa ': 8,
+                    'Negocacion escalonada': 8,
+                    'Beneficios claros': 8,
+                    'Diferenciación vs competencia': 5,
+                    'Personalización del discurso según necesidad': 7,
+                    'Generación de urgencia': 5,
+                    'Registro correcto en sistema ': 3,
+                    'Uso adecuado de etiquetas': 2
+                }
+                
+                puntaje_maximo = puntos_maximos.get(criterio_seleccionado, 'N/A')
             
             # Crear tabla de resultados
             resultados = []
