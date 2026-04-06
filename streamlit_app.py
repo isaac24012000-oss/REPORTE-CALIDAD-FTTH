@@ -111,9 +111,24 @@ def encuentra_archivo_excel(filename):
         os.path.join(os.path.dirname(__file__), filename),  # Directorio del script
     ]
     
+    # Primero intentar rutas exactas
     for path in possible_paths:
         if os.path.exists(path):
             return path
+    
+    # Si no encuentra, buscar en el directorio actual con búsqueda insensible a mayúsculas
+    current_dir = os.getcwd()
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    for search_dir in [current_dir, script_dir]:
+        try:
+            if os.path.isdir(search_dir):
+                for file in os.listdir(search_dir):
+                    if file.lower() == filename.lower() and file.endswith('.xlsx'):
+                        full_path = os.path.join(search_dir, file)
+                        return full_path
+        except (PermissionError, OSError):
+            pass
     
     return None
 
@@ -226,6 +241,7 @@ def cargar_datos():
     """Carga los datos del Excel"""
     excel_file = encuentra_archivo_excel('CONTROL DE AUDITORIAS.xlsx')
     if excel_file is None:
+        st.warning("⚠️ No se encontró el archivo CONTROL DE AUDITORIAS.xlsx")
         return pd.DataFrame()
     df = pd.read_excel(excel_file, sheet_name='Data')
     
@@ -296,6 +312,7 @@ def cargar_datos_couching():
     """Carga los datos de Couching del Excel"""
     excel_file = encuentra_archivo_excel('CONTROL DE AUDITORIAS.xlsx')
     if excel_file is None:
+        st.warning("⚠️ No se encontró el archivo CONTROL DE AUDITORIAS.xlsx")
         return pd.DataFrame()
     df = pd.read_excel(excel_file, sheet_name='Couching')
     
@@ -740,7 +757,31 @@ def cargar_datos_control_calidad():
         excel_file = encuentra_archivo_excel('REPORTE CALIDAD.xlsx')
         
         if excel_file is None:
-            st.error("No se encontró el archivo REPORTE CALIDAD.xlsx")
+            # Mostrar información de depuración
+            current_dir = os.getcwd()
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            
+            error_msg = f"""
+            ⚠️ No se encontró el archivo **REPORTE CALIDAD.xlsx**
+            
+            **Ubicaciones buscadas:**
+            - {current_dir}
+            - {script_dir}
+            
+            **Archivos disponibles en el directorio actual:**
+            """
+            
+            try:
+                files = [f for f in os.listdir(current_dir) if f.endswith('.xlsx')]
+                if files:
+                    for f in files:
+                        error_msg += f"\n- {f}"
+                else:
+                    error_msg += "\n- (ningún archivo .xlsx encontrado)"
+            except:
+                pass
+            
+            st.warning(error_msg)
             return pd.DataFrame()
         
         df = pd.read_excel(excel_file, sheet_name=0)
@@ -816,6 +857,23 @@ else:
 # Header
 st.markdown("## 📊 Dashboard - Control de Auditorías")
 st.markdown("*Análisis de desempeño de agentes y métricas de calidad*")
+
+# Verificar archivos necesarios
+archivos_requeridos = ['CONTROL DE AUDITORIAS.xlsx', 'REPORTE CALIDAD.xlsx']
+archivos_encontrados = []
+archivos_faltantes = []
+
+for archivo in archivos_requeridos:
+    ruta = encuentra_archivo_excel(archivo)
+    if ruta:
+        archivos_encontrados.append(archivo)
+    else:
+        archivos_faltantes.append(archivo)
+
+if archivos_faltantes:
+    with st.expander("⚠️ Archivos faltantes", expanded=False):
+        st.warning(f"Se necesita el archivo: **{', '.join(archivos_faltantes)}**")
+        st.info(f"✅ Archivos encontrados: {len(archivos_encontrados)}\n\n❌ Archivos faltantes: {len(archivos_faltantes)}")
 
 # Métricas principales
 col1, col2, col3 = st.columns(3)
