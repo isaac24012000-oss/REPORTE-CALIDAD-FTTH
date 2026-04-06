@@ -707,6 +707,56 @@ def calcular_resumen_progreso_agentes(df_progreso):
     except Exception as e:
         return pd.DataFrame()
 
+@st.cache_data
+def cargar_datos_control_calidad():
+    """Carga los datos de Control de Calidad del archivo REPORTE CALIDAD.xlsx"""
+    try:
+        excel_file = 'REPORTE CALIDAD.xlsx'
+        df = pd.read_excel(excel_file, sheet_name=0)
+        
+        # Contar leads por agente
+        leads_por_agente = df['AGENTE'].value_counts().reset_index()
+        leads_por_agente.columns = ['Agente', 'Leads']
+        
+        # Contar notificados (no SIN CALIFICAR)
+        df_notificado = df[df['STATUS'].notna() & (df['STATUS'] != 'SIN CALIFICAR')]
+        notificado_por_agente = df_notificado['AGENTE'].value_counts().reset_index()
+        notificado_por_agente.columns = ['Agente', 'Notificado Q']
+        
+        # Contar exactitud (EXACTITUD o CORRECTO)
+        df_exactitud = df[
+            ((df['STATUS'] == 'CORRECTO') | (df['STATUSS'] == 'EXACTITUD'))
+        ]
+        exactitud_por_agente = df_exactitud['AGENTE'].value_counts().reset_index()
+        exactitud_por_agente.columns = ['Agente', 'Exactitud Q']
+        
+        # Combinar todos los datos
+        resultado = leads_por_agente.copy()
+        resultado = resultado.merge(notificado_por_agente, on='Agente', how='left')
+        resultado = resultado.merge(exactitud_por_agente, on='Agente', how='left')
+        
+        # Llenar NaN con 0
+        resultado = resultado.fillna(0)
+        
+        # Convertir a enteros
+        resultado['Notificado Q'] = resultado['Notificado Q'].astype(int)
+        resultado['Exactitud Q'] = resultado['Exactitud Q'].astype(int)
+        
+        # Calcular porcentajes
+        resultado['Notificado %'] = (resultado['Notificado Q'] / resultado['Leads'] * 100).round(2).astype(str) + '%'
+        resultado['Exactitud %'] = (resultado['Exactitud Q'] / resultado['Leads'] * 100).round(2).astype(str) + '%'
+        
+        # Reordenar columnas
+        resultado = resultado[['Agente', 'Leads', 'Notificado Q', 'Notificado %', 'Exactitud Q', 'Exactitud %']]
+        
+        # Ordenar por Agente
+        resultado = resultado.sort_values('Agente').reset_index(drop=True)
+        
+        return resultado
+    except Exception as e:
+        st.error(f"Error al cargar datos de Control de Calidad: {str(e)}")
+        return pd.DataFrame()
+
 # Cargar datos
 df_data = cargar_datos()
 df_couching = cargar_datos_couching()
@@ -716,6 +766,7 @@ df_progreso = cargar_datos_progreso()
 df_progreso_procesado = procesar_datos_progreso(df_progreso)
 df_vista_semanal = generar_vista_semanal(df_progreso_procesado)
 df_resumen_progreso = calcular_resumen_progreso_agentes(df_progreso_procesado)
+df_control_calidad = cargar_datos_control_calidad()
 
 # Cálculos para estadísticas
 excel_file = 'CONTROL DE AUDITORIAS.xlsx'
@@ -758,8 +809,8 @@ with col3:
     """, unsafe_allow_html=True)
 
 # Tabs para diferentes vistas
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(
-    ["📋 Control de Auditorias", "📋 Plan de Acción", "📈 Desempeño", "🔍 Análisis por Métrica", "📚 Métricas", "🎯 Niveles de Intensidad", "� Progreso de Plan"]
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(
+    ["📋 Control de Auditorias", "📋 Plan de Acción", "📈 Desempeño", "🔍 Análisis por Métrica", "📚 Métricas", "🎯 Niveles de Intensidad", "📊 Progreso de Plan", "📊 Control de Calidad"]
 )
 
 # Tab 1: Datos de Control
@@ -1318,6 +1369,19 @@ with tab7:
             </div>
         </div>
         """, unsafe_allow_html=True)
+
+# Tab 8: Control de Calidad
+with tab8:
+    st.write("<h2 style='text-align: center;'>📊 Control de Calidad</h2>", unsafe_allow_html=True)
+    
+    if not df_control_calidad.empty:
+        st.dataframe(
+            df_control_calidad,
+            use_container_width=True,
+            hide_index=True
+        )
+    else:
+        st.warning("No hay datos disponibles en el archivo de Control de Calidad.")
 
 # Footer
 st.markdown("---")
