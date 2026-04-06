@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from datetime import datetime
+import os
 
 # Configuración de la página
 st.set_page_config(
@@ -711,7 +712,9 @@ def calcular_resumen_progreso_agentes(df_progreso):
 def cargar_datos_control_calidad():
     """Carga los datos de Control de Calidad del archivo REPORTE CALIDAD.xlsx"""
     try:
-        excel_file = 'REPORTE CALIDAD.xlsx'
+        # Obtener el directorio del script actual
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        excel_file = os.path.join(script_dir, 'REPORTE CALIDAD.xlsx')
         df = pd.read_excel(excel_file, sheet_name=0)
         
         # Contar leads por agente
