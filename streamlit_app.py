@@ -759,7 +759,7 @@ with col3:
 
 # Tabs para diferentes vistas
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(
-    ["📋 Control", "📋 Plan de Acción", "📈 Desempeño", "🔍 Análisis por Métrica", "📚 Métricas", "🎯 Niveles de Intensidad", "� Progreso de Plan"]
+    ["📋 Control de Auditorias", "📋 Plan de Acción", "📈 Desempeño", "🔍 Análisis por Métrica", "📚 Métricas", "🎯 Niveles de Intensidad", "� Progreso de Plan"]
 )
 
 # Tab 1: Datos de Control
