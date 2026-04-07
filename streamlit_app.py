@@ -813,17 +813,17 @@ def cargar_datos_control_calidad():
         leads_por_agente = df['AGENTE'].value_counts().reset_index()
         leads_por_agente.columns = ['Agente', 'Leads']
         
-        # Contar notificados (no SIN CALIFICAR)
-        df_notificado = df[df['STATUS'].notna() & (df['STATUS'] != 'SIN CALIFICAR')]
-        notificado_por_agente = df_notificado['AGENTE'].value_counts().reset_index()
-        notificado_por_agente.columns = ['Agente', 'Notificado Q']
-        
         # Contar exactitud (CORRECTO, EXACTITUD o VALIDACION COBERTURA)
         df_exactitud = df[
             (df['STATUS'].isin(['CORRECTO', 'EXACTITUD', 'VALIDACION COBERTURA']))
         ]
         exactitud_por_agente = df_exactitud['AGENTE'].value_counts().reset_index()
         exactitud_por_agente.columns = ['Agente', 'Exactitud Q']
+        
+        # Contar notificados (SIN CALIFICAR - lo restante)
+        df_notificado = df[df['STATUS'] == 'SIN CALIFICAR']
+        notificado_por_agente = df_notificado['AGENTE'].value_counts().reset_index()
+        notificado_por_agente.columns = ['Agente', 'Notificado Q']
         
         # Combinar todos los datos
         resultado = leads_por_agente.copy()
