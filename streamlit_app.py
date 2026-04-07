@@ -818,9 +818,9 @@ def cargar_datos_control_calidad():
         notificado_por_agente = df_notificado['AGENTE'].value_counts().reset_index()
         notificado_por_agente.columns = ['Agente', 'Notificado Q']
         
-        # Contar exactitud (EXACTITUD o CORRECTO)
+        # Contar exactitud (CORRECTO, EXACTITUD o VALIDACION COBERTURA)
         df_exactitud = df[
-            ((df['STATUS'] == 'CORRECTO') | (df['STATUSS'] == 'EXACTITUD'))
+            ((df['STATUS'] == 'CORRECTO') | (df['STATUSS'] == 'EXACTITUD') | (df['STATUS'] == 'VALIDACION COBERTURA'))
         ]
         exactitud_por_agente = df_exactitud['AGENTE'].value_counts().reset_index()
         exactitud_por_agente.columns = ['Agente', 'Exactitud Q']
