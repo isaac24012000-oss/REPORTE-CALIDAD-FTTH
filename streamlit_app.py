@@ -647,13 +647,13 @@ def cargar_datos_progreso():
             if pd.isna(row['Δ vs anterior']):
                 return '🟦 Línea base'
             elif row['Δ vs anterior'] >= 5:
-                return '🟢 Mejora significativa'
+                return '� Subiendo fuerte'
             elif 1 <= row['Δ vs anterior'] < 5:
-                return '🟡 Mejora leve'
+                return '📈 Subiendo poquito'
             elif row['Δ vs anterior'] == 0:
-                return '⚪ Estabilidad'
+                return '😌 Tranquilo'
             else:
-                return '🔴 Decremento'
+                return '📉 Bajando'
         
         df['Progreso'] = df.apply(obtener_progreso, axis=1)
         
@@ -708,17 +708,17 @@ def generar_vista_semanal(df_progreso):
                 es_primera = row['Δ es_primera']
                 
                 if es_primera:
-                    return '⭐ Primera evaluación'
+                    return '⭐ Primera vez'
                 elif delta >= 5:
-                    return '🟢 Mejora significativa'
+                    return '📈 Subiendo fuerte'
                 elif 1 <= delta < 5:
-                    return '🟡 Mejora leve'
+                    return '📈 Subiendo poquito'
                 elif -1 < delta < 1 and delta != 0:
-                    return '⚪ Estable (cambio mínimo)'
+                    return '😌 Tranquilo (casi sin cambios)'
                 elif delta == 0:
-                    return '⚪ Estable'
+                    return '😌 Tranquilo'
                 else:
-                    return '🔴 Decremento'
+                    return '📉 Bajando'
             
             vista_semanal['Estado'] = vista_semanal.apply(obtener_estado, axis=1)
             
@@ -749,13 +749,13 @@ def calcular_resumen_progreso_agentes(df_progreso):
             
             # Clasificación de progreso
             if delta_promedio >= 5:
-                estado = '🟢 Mejora significativa'
+                estado = '� Subiendo fuerte'
             elif 1 <= delta_promedio < 5:
-                estado = '🟡 Mejora leve'
+                estado = '📈 Subiendo poquito'
             elif -1 < delta_promedio <= 0:
-                estado = '⚪ Estable'
+                estado = '😌 Tranquilo'
             else:
-                estado = '🔴 Decremento'
+                estado = '📉 Bajando'
             
             resumen.append({
                 'Agentes Zimach': agente,
@@ -1135,27 +1135,27 @@ with tab3:
                                 if delta_promedio >= 5:
                                     color_bg = "#d4edda"
                                     color_border = "#28a745"
-                                    icono = "🟢"
-                                    titulo = "Mejora Significativa"
+                                    icono = "�"
+                                    titulo = "Subiendo fuerte"
                                     recomendacion = f"¡Excelente! {agente} está demostrando un incremento sostenido de <strong>+{delta_promedio:.2f}%</strong> en su desempeño. Continúa con las estrategias actuales de coaching. Se recomienda evaluar qué está funcionando bien y replicarlo en otras áreas."
                                 elif 1 <= delta_promedio < 5:
                                     color_bg = "#fff3cd"
                                     color_border = "#ffc107"
-                                    icono = "🟡"
-                                    titulo = "Mejora Leve"
+                                    icono = "�"
+                                    titulo = "Subiendo poquito"
                                     recomendacion = f"{agente} está avanzando con una mejora leve de <strong>+{delta_promedio:.2f}%</strong>. Se recomienda intensificar el coaching enfocándose en las áreas críticas. Realiza feedback más frecuentes y establece objetivos más claros."
                                 elif -1 < delta_promedio <= 0:
                                     color_bg = "#f8f9fa"
                                     color_border = "#6c757d"
-                                    icono = "⚪"
-                                    titulo = "Estable"
+                                    icono = "😌"
+                                    titulo = "Tranquilo"
                                     recomendacion = f"{agente} está manteniendo su nivel con cambios mínimos de <strong>{delta_promedio:.2f}%</strong>. Analiza si necesita más apoyo o nuevas estrategias de coaching para generar impulso."
                                 else:
                                     color_bg = "#f8d7da"
                                     color_border = "#dc3545"
-                                    icono = "🔴"
-                                    titulo = "Sin Mejora"
-                                    recomendacion = f"{agente} presenta un decremento de <strong>{delta_promedio:.2f}%</strong>. Se requiere intervención inmediata. Realiza una evaluación profunda de barreras, aumenta la frecuencia de coaching y considera coaching intensivo."
+                                    icono = "�"
+                                    titulo = "Bajando"
+                                    recomendacion = f"{agente} está bajando con un decremento de <strong>{delta_promedio:.2f}%</strong>. Se requiere intervención inmediata. Realiza una evaluación profunda de barreras, aumenta la frecuencia de coaching y considera coaching intensivo."
                                 
                                 st.markdown(f"""
                                 <div style="background: {color_bg}; padding: 20px; border-radius: 10px; margin: 20px 0; border-left: 5px solid {color_border};">
