@@ -1727,6 +1727,45 @@ df_resumen_progreso = calcular_resumen_progreso_agentes(df_progreso_procesado)
 df_control_calidad = cargar_datos_control_calidad()
 
 
+# ✅ FILTRO GLOBAL POR MES
+excel_file_fecha = encuentra_archivo_excel('CONTROL DE AUDITORIAS.xlsx')
+df_fecha = pd.DataFrame()
+meses_disponibles = []
+mes_filtro_global = None
+
+if excel_file_fecha:
+    try:
+        df_fecha = pd.read_excel(excel_file_fecha, sheet_name='Progreso_Fecha')
+        # Convertir columna Fecha a datetime
+        if 'Fecha' in df_fecha.columns:
+            df_fecha['Fecha'] = pd.to_datetime(df_fecha['Fecha'], errors='coerce')
+            df_fecha['Mes'] = df_fecha['Fecha'].dt.strftime('%B %Y')
+            # Obtener meses únicos y ordenarlos
+            meses_disponibles = sorted(df_fecha['Mes'].dropna().unique(), reverse=True)
+    except:
+        pass
+
+# --- Mostrar selector de mes (UI)
+st.markdown("## 📊 Dashboard - Control de Auditorías")
+st.markdown("*Análisis de desempeño de agentes y métricas de calidad*")
+
+col_filtro, col_info = st.columns([3, 6])
+
+with col_filtro:
+    if meses_disponibles:
+        mes_filtro_global = st.selectbox("📅 **Filtrar por mes:**", meses_disponibles, index=0, key="filtro_mes_global")
+    else:
+        st.info("No hay datos de fechas disponibles")
+
+# Aplicar filtro global a df_data
+if mes_filtro_global:
+    agentes_mes_global = df_fecha[df_fecha['Mes'] == mes_filtro_global]['Agentes Zimach'].unique()
+    df_data = df_data[df_data['Agentes Zimach'].isin(agentes_mes_global)].copy()
+    with col_info:
+        st.info(f"📊 Mostrando datos de **{mes_filtro_global}** | Agentes: {len(agentes_mes_global)}")
+
+st.markdown("---")
+
 
 # Cálculos para estadísticas
 excel_file = encuentra_archivo_excel('CONTROL DE AUDITORIAS.xlsx')
@@ -1874,8 +1913,6 @@ with tab_monitoreo:
     with subtab1:
 
         st.write("<h2 style='text-align: center;'>📋 Control de Auditorías</h2>", unsafe_allow_html=True)
-
-    
 
         # Combinar datos de control con resumen de progreso
 
