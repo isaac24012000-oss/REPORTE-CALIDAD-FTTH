@@ -1960,6 +1960,9 @@ with tab_monitoreo:
 
     
 
+        # Ajustar índice para que empiece desde 1
+        df_control_mejorado.index = df_control_mejorado.index + 1
+        
         # Mostrar tabla como dataframe nativo de Streamlit
         st.dataframe(df_control_mejorado, use_container_width=True, height=400)
 
@@ -1989,6 +1992,7 @@ with tab_monitoreo:
 
         st.write("<h2 style='text-align: center;'>📋 Plan de Acción</h2>", unsafe_allow_html=True)
 
+        df_couching.index = df_couching.index + 1
         st.dataframe(df_couching, width='stretch', height=400)
 
     
@@ -2415,6 +2419,7 @@ with tab_monitoreo:
 
         st.write("<h2 style='text-align: center;'>📈 Puntaje de Desempeño</h2>", unsafe_allow_html=True)
 
+        df_desempeño.index = df_desempeño.index + 1
         st.dataframe(df_desempeño, width='stretch', height=400)
 
     
@@ -2853,6 +2858,7 @@ with tab_monitoreo:
 
         st.info("Esta tabla muestra todos los criterios de evaluación, sus descripciones, puntajes máximos y la categoría a la que pertenecen.")
 
+        df_metricas.index = df_metricas.index + 1
         st.dataframe(df_metricas, width='stretch', height=600)
 
     
