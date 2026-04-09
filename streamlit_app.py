@@ -1814,49 +1814,27 @@ col1, col2, col3 = st.columns(3)
 
 
 with col1:
-
-    st.markdown(f"""
-
-        <div class="metric-card">
-
-            <div class="metric-label">👥 Total de Agentes</div>
-
-            <div class="metric-value">{total_agentes}</div>
-
+    st.write(f"""
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">👥 Total de Agentes</div>
+            <div style="font-size: 2.5rem; font-weight: bold; margin: 10px 0;">{int(total_agentes)}</div>
         </div>
-
     """, unsafe_allow_html=True)
-
-
 
 with col2:
-
-    st.markdown(f"""
-
-        <div class="metric-card">
-
-            <div class="metric-label">↔️ Conversión Promedio</div>
-
-            <div class="metric-value">{conv_promedio:.2f}%</div>
-
+    st.write(f"""
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">↔️ Conversión Promedio</div>
+            <div style="font-size: 2.5rem; font-weight: bold; margin: 10px 0;">{conv_promedio:.2f}%</div>
         </div>
-
     """, unsafe_allow_html=True)
 
-
-
 with col3:
-
-    st.markdown(f"""
-
-        <div class="metric-card">
-
-            <div class="metric-label">⭐ Calidad Promedio</div>
-
-            <div class="metric-value">{calidad_promedio:.2f}%</div>
-
+    st.write(f"""
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">⭐ Calidad Promedio</div>
+            <div style="font-size: 2.5rem; font-weight: bold; margin: 10px 0;">{calidad_promedio:.2f}%</div>
         </div>
-
     """, unsafe_allow_html=True)
 
 
