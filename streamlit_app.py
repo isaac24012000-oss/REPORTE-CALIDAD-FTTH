@@ -1923,31 +1923,8 @@ with tab_monitoreo:
 
     
 
-        # Aplicar colores al DataFrame
-
-        df_coloreado = aplicar_colores_df(df_control_mejorado)
-
-    
-
-        # Convertir a HTML con colores
-
-        html_tabla = df_coloreado.to_html(escape=False, index=False)
-
-        html_tabla = f"""
-
-        <div style="display: flex; justify-content: center; width: 100%;">
-
-            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px;">
-
-                {html_tabla}
-
-            </div>
-
-        </div>
-
-        """
-
-        st.markdown(html_tabla, unsafe_allow_html=True)
+        # Mostrar tabla como dataframe nativo de Streamlit
+        st.dataframe(df_control_mejorado, use_container_width=True, height=400)
 
     
 
