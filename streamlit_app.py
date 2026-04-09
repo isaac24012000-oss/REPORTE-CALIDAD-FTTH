@@ -1300,15 +1300,15 @@ def cargar_datos_progreso():
 
             elif 1 <= row['Δ vs anterior'] < 5:
 
-                return '📈 Subiendo poquito'
+                return '📈 En Aumento'
 
             elif row['Δ vs anterior'] == 0:
 
-                return '😌 Tranquilo'
+                return '↔️ Mantiene Nivel'
 
             else:
 
-                return '📉 Bajando'
+                return '📉 En Disminución'
 
         
 
@@ -1426,7 +1426,7 @@ def generar_vista_semanal(df_progreso):
 
                 elif 1 <= delta < 5:
 
-                    return '📈 Subiendo poquito'
+                    return '📈 En Aumento'
 
                 elif -1 < delta < 1 and delta != 0:
 
@@ -1434,11 +1434,11 @@ def generar_vista_semanal(df_progreso):
 
                 elif delta == 0:
 
-                    return '😌 Tranquilo'
+                    return '↔️ Mantiene Nivel'
 
                 else:
 
-                    return '📉 Bajando'
+                    return '📉 En Disminución'
 
             
 
