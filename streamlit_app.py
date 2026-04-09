@@ -1729,30 +1729,39 @@ df_control_calidad = cargar_datos_control_calidad()
 
 
 # Cálculos para estadísticas
-
 excel_file = encuentra_archivo_excel('CONTROL DE AUDITORIAS.xlsx')
-
 if excel_file:
-
     df_raw = pd.read_excel(excel_file, sheet_name='Data')
-
     df_raw_filtrado = df_raw[df_raw['Agentes Zimach'].astype(str).str.contains('ZIM_', case=False, na=False)]
-
-
-
-    total_agentes = len(df_data)
-
-    conv_promedio = df_raw_filtrado['Sale Conv %'].mean() * 100
-
-    calidad_promedio = df_raw_filtrado['% calidad'].mean() * 100
-
+    
+    total_agentes = len(df_raw_filtrado)
+    
+    # Convertir Sale Conv % a número (eliminar % si es string)
+    try:
+        if 'Sale Conv %' in df_raw_filtrado.columns:
+            conv_valores = df_raw_filtrado['Sale Conv %'].apply(
+                lambda x: float(str(x).replace('%', '')) if pd.notna(x) else 0
+            )
+            conv_promedio = conv_valores.mean()
+        else:
+            conv_promedio = 0
+    except:
+        conv_promedio = 0
+    
+    # Calcular calidad promedio
+    try:
+        if '% calidad' in df_raw_filtrado.columns:
+            calidad_valores = df_raw_filtrado['% calidad'].apply(
+                lambda x: float(str(x).replace('%', '')) if pd.notna(x) else 0
+            )
+            calidad_promedio = calidad_valores.mean()
+        else:
+            calidad_promedio = 0
+    except:
+        calidad_promedio = 0
 else:
-
     total_agentes = 0
-
     conv_promedio = 0
-
-    calidad_promedio = 0
 
 
 
