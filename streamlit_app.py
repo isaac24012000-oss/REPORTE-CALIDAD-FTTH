@@ -1300,15 +1300,15 @@ def cargar_datos_progreso():
 
             elif 1 <= row['Δ vs anterior'] < 5:
 
-                return '📈 En Aumento'
+                return '📈 Subiendo poquito'
 
             elif row['Δ vs anterior'] == 0:
 
-                return '↔️ Mantiene Nivel'
+                return '😌 Tranquilo'
 
             else:
 
-                return '📉 En Disminución'
+                return '📉 Bajando'
 
         
 
@@ -1422,23 +1422,23 @@ def generar_vista_semanal(df_progreso):
 
                 elif delta >= 5:
 
-                    return '📈 En Aumento'
+                    return '📈 Subiendo fuerte'
 
                 elif 1 <= delta < 5:
 
-                    return '📈 En Aumento'
+                    return '📈 Subiendo poquito'
 
                 elif -1 < delta < 1 and delta != 0:
 
-                    return '↔️ Mantiene Nivel'
+                    return '😌 Tranquilo (casi sin cambios)'
 
                 elif delta == 0:
 
-                    return '↔️ Mantiene Nivel'
+                    return '😌 Tranquilo'
 
                 else:
 
-                    return '📉 En Disminución'
+                    return '📉 Bajando'
 
             
 
@@ -1504,15 +1504,15 @@ def calcular_resumen_progreso_agentes(df_progreso):
 
             elif 1 <= delta_promedio < 5:
 
-                estado = '📈 En Aumento'
+                estado = '📈 Subiendo poquito'
 
             elif -1 < delta_promedio <= 0:
 
-                estado = '↔️ Mantiene Nivel'
+                estado = '😌 Tranquilo'
 
             else:
 
-                estado = '📉 En Disminución'
+                estado = '📉 Bajando'
 
             
 
@@ -2294,7 +2294,7 @@ with tab_monitoreo:
 
                                         icono = "�"
 
-                                        titulo = "En Aumento"
+                                        titulo = "Subiendo fuerte"
 
                                         recomendacion = f"¡Excelente! {agente} está demostrando un incremento sostenido de <strong>+{delta_promedio:.2f}%</strong> en su desempeño. Continúa con las estrategias actuales de coaching. Se recomienda evaluar qué está funcionando bien y replicarlo en otras áreas."
 
@@ -2306,7 +2306,7 @@ with tab_monitoreo:
 
                                         icono = "�"
 
-                                        titulo = "En Aumento"
+                                        titulo = "Subiendo poquito"
 
                                         recomendacion = f"{agente} está avanzando con una mejora leve de <strong>+{delta_promedio:.2f}%</strong>. Se recomienda intensificar el coaching enfocándose en las áreas críticas. Realiza feedback más frecuentes y establece objetivos más claros."
 
@@ -2318,7 +2318,7 @@ with tab_monitoreo:
 
                                         icono = "😌"
 
-                                        titulo = "Mantiene Nivel"
+                                        titulo = "Tranquilo"
 
                                         recomendacion = f"{agente} está manteniendo su nivel con cambios mínimos de <strong>{delta_promedio:.2f}%</strong>. Analiza si necesita más apoyo o nuevas estrategias de coaching para generar impulso."
 
@@ -2330,7 +2330,7 @@ with tab_monitoreo:
 
                                         icono = "�"
 
-                                        titulo = "En Disminución"
+                                        titulo = "Bajando"
 
                                         recomendacion = f"{agente} está bajando con un decremento de <strong>{delta_promedio:.2f}%</strong>. Se requiere intervención inmediata. Realiza una evaluación profunda de barreras, aumenta la frecuencia de coaching y considera coaching intensivo."
 
