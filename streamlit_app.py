@@ -1582,8 +1582,8 @@ def cargar_datos_semanas():
         df_sin = df_cc[df_cc['STATUS'] == 'SIN CALIFICAR'].copy()
         sin_por_semana = df_sin.groupby(['AGENTE', 'Semana']).size().reset_index(name='Sin_Calif')
         
-        # Contar Exactitud (todo lo que NO es SIN CALIFICAR)
-        df_exactitud = df_cc[df_cc['STATUS'] != 'SIN CALIFICAR'].copy()
+        # Contar Exactitud (solo STATUS = 'EXACTITUD')
+        df_exactitud = df_cc[df_cc['STATUS'] == 'EXACTITUD'].copy()
         exactitud_por_semana = df_exactitud.groupby(['AGENTE', 'Semana']).size().reset_index(name='Exactitud')
         
         # Merge sin y exactitud
@@ -1732,7 +1732,17 @@ def cargar_datos_control_calidad():
 
         sin_calificar_por_agente = df_sin_calificar['AGENTE'].value_counts().reset_index()
 
-        sin_calificar_por_agente.columns = ['Agente', 'Notificado Q']
+        sin_calificar_por_agente.columns = ['Agente', 'Sin Calificar Q']
+
+        
+
+        # Contar EXACTITUD
+
+        df_exactitud = df[df['STATUS'] == 'EXACTITUD']
+
+        exactitud_por_agente = df_exactitud['AGENTE'].value_counts().reset_index()
+
+        exactitud_por_agente.columns = ['Agente', 'Exactitud Q']
 
         
 
@@ -1742,23 +1752,21 @@ def cargar_datos_control_calidad():
 
         resultado = resultado.merge(sin_calificar_por_agente, on='Agente', how='left')
 
-        
-
-        # Llenar NaN con 0 en Notificado Q
-
-        resultado['Notificado Q'] = resultado['Notificado Q'].fillna(0).astype(int)
+        resultado = resultado.merge(exactitud_por_agente, on='Agente', how='left')
 
         
 
-        # Calcular Exactitud Q = Total Leads - Sin Calificar
+        # Llenar NaN con 0
 
-        resultado['Exactitud Q'] = resultado['Leads'] - resultado['Notificado Q']
+        resultado['Sin Calificar Q'] = resultado['Sin Calificar Q'].fillna(0).astype(int)
+
+        resultado['Exactitud Q'] = resultado['Exactitud Q'].fillna(0).astype(int)
 
         
 
         # Calcular porcentajes
 
-        resultado['Notificado %'] = (resultado['Notificado Q'] / resultado['Leads'] * 100).round(2).astype(str) + '%'
+        resultado['Sin Calificar %'] = (resultado['Sin Calificar Q'] / resultado['Leads'] * 100).round(2).astype(str) + '%'
 
         resultado['Exactitud %'] = (resultado['Exactitud Q'] / resultado['Leads'] * 100).round(2).astype(str) + '%'
 
@@ -1766,7 +1774,7 @@ def cargar_datos_control_calidad():
 
         # Reordenar columnas
 
-        resultado = resultado[['Agente', 'Leads', 'Notificado Q', 'Notificado %', 'Exactitud Q', 'Exactitud %']]
+        resultado = resultado[['Agente', 'Leads', 'Sin Calificar Q', 'Sin Calificar %', 'Exactitud Q', 'Exactitud %']]
 
         
 
@@ -3100,19 +3108,19 @@ with tab_control_calidad:
     # Calcular indicadores de Control de Calidad
     if not df_control_calidad.empty:
         # Extraer valores porcentuales y convertir a numeros
-        notify_values = []
+        sin_calificar_values = []
         exactitud_values = []
         
         for idx, row in df_control_calidad.iterrows():
-            notify_str = str(row['Notificado %']).rstrip('%')
+            sin_str = str(row['Sin Calificar %']).rstrip('%')
             exactitud_str = str(row['Exactitud %']).rstrip('%')
             try:
-                notify_values.append(float(notify_str))
+                sin_calificar_values.append(float(sin_str))
                 exactitud_values.append(float(exactitud_str))
             except:
                 pass
         
-        prom_sin_calificar = sum(notify_values) / len(notify_values) if notify_values else 0
+        prom_sin_calificar = sum(sin_calificar_values) / len(sin_calificar_values) if sin_calificar_values else 0
         prom_exactitud = sum(exactitud_values) / len(exactitud_values) if exactitud_values else 0
         total_leads = df_control_calidad['Leads'].sum()
         
@@ -3216,25 +3224,25 @@ with tab_control_calidad:
         for idx, row in df_control_calidad.iterrows():
             agente = str(row['Agente']).strip()
             leads = int(row['Leads'])
-            notif_q = int(row['Notificado Q'])
-            notif_pct_str = str(row['Notificado %']).rstrip('%').strip()
+            sin_q = int(row['Sin Calificar Q'])
+            sin_pct_str = str(row['Sin Calificar %']).rstrip('%').strip()
             exact_q = int(row['Exactitud Q'])
             exact_pct_str = str(row['Exactitud %']).rstrip('%').strip()
             
             try:
-                notif_pct = float(notif_pct_str)
+                sin_pct = float(sin_pct_str)
                 exact_pct = float(exact_pct_str)
             except:
-                notif_pct = 0
+                sin_pct = 0
                 exact_pct = 0
             
             # Determinar clase para Sin Calificar
-            if notif_pct > 10:
-                notif_clase = "notificado-alto"
-            elif notif_pct > 5:
-                notif_clase = "notificado-medio"
+            if sin_pct > 10:
+                sin_clase = "notificado-alto"
+            elif sin_pct > 5:
+                sin_clase = "notificado-medio"
             else:
-                notif_clase = "notificado-bajo"
+                sin_clase = "notificado-bajo"
             
             # Determinar clase para Exactitud
             if exact_pct >= 90:
@@ -3244,7 +3252,7 @@ with tab_control_calidad:
             else:
                 exact_clase = "exactitud-bajo"
             
-            html_tabla += f'<tr><td class="agente-col">{agente}</td><td class="leads-col">{leads}</td><td>{notif_q}</td><td class="{notif_clase}">{notif_pct_str}%</td><td>{exact_q}</td><td class="{exact_clase}">{exact_pct_str}%</td></tr>'
+            html_tabla += f'<tr><td class="agente-col">{agente}</td><td class="leads-col">{leads}</td><td>{sin_q}</td><td class="{sin_clase}">{sin_pct_str}%</td><td>{exact_q}</td><td class="{exact_clase}">{exact_pct_str}%</td></tr>'
         
         html_tabla += '</tbody></table>'
         
