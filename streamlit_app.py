@@ -1846,38 +1846,6 @@ if archivos_faltantes:
 
 
 
-# Métricas principales
-
-col1, col2, col3 = st.columns(3)
-
-
-
-with col1:
-    st.write(f"""
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-            <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">👥 Total de Agentes</div>
-            <div style="font-size: 2.5rem; font-weight: bold; margin: 10px 0;">{int(total_agentes)}</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-with col2:
-    st.write(f"""
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-            <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">↔️ Conversión Promedio</div>
-            <div style="font-size: 2.5rem; font-weight: bold; margin: 10px 0;">{conv_promedio * 100:.2f}%</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-with col3:
-    st.write(f"""
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-            <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">⭐ Calidad Promedio</div>
-            <div style="font-size: 2.5rem; font-weight: bold; margin: 10px 0;">{calidad_promedio * 100:.2f}%</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-
-
 # Tabs para diferentes vistas
 
 # Tabs principales: Monitoreo y Control de Calidad
@@ -1897,6 +1865,36 @@ tab_monitoreo, tab_control_calidad = st.tabs(
 # ==============================================
 
 with tab_monitoreo:
+
+    # Métricas principales de Monitoreo
+    st.markdown("### 📊 Indicadores Principales")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.write(f"""
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">👥 Total de Agentes</div>
+                <div style="font-size: 2.5rem; font-weight: bold; margin: 10px 0;">{int(total_agentes)}</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.write(f"""
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">↔️ Conversión Promedio</div>
+                <div style="font-size: 2.5rem; font-weight: bold; margin: 10px 0;">{conv_promedio * 100:.2f}%</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.write(f"""
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">⭐ Calidad Promedio</div>
+                <div style="font-size: 2.5rem; font-weight: bold; margin: 10px 0;">{calidad_promedio * 100:.2f}%</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
 
     # Subtabs dentro de Monitoreo
 
@@ -3016,20 +3014,159 @@ with tab_monitoreo:
 with tab_control_calidad:
 
     st.write("<h2 style='text-align: center;'>📊 Control de Calidad</h2>", unsafe_allow_html=True)
-
     
-
+    # Calcular indicadores de Control de Calidad
     if not df_control_calidad.empty:
+        # Extraer valores porcentuales y convertir a numeros
+        notify_values = []
+        exactitud_values = []
+        
+        for idx, row in df_control_calidad.iterrows():
+            notify_str = str(row['Notificado %']).rstrip('%')
+            exactitud_str = str(row['Exactitud %']).rstrip('%')
+            try:
+                notify_values.append(float(notify_str))
+                exactitud_values.append(float(exactitud_str))
+            except:
+                pass
+        
+        prom_sin_calificar = sum(notify_values) / len(notify_values) if notify_values else 0
+        prom_exactitud = sum(exactitud_values) / len(exactitud_values) if exactitud_values else 0
+        total_leads = df_control_calidad['Leads'].sum()
+        
+        # Mostrar indicadores principales
+        st.markdown("### 📊 Indicadores Principales de Calidad")
+        col1_cc, col2_cc, col3_cc = st.columns(3)
+        
+        with col1_cc:
+            st.write(f"""
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">📋 Total Leads</div>
+                    <div style="font-size: 2.5rem; font-weight: bold; margin: 10px 0;">{int(total_leads)}</div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        with col2_cc:
+            st.write(f"""
+                <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ffa94d 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">⚠️ Promedio Sin Calificar</div>
+                    <div style="font-size: 2.5rem; font-weight: bold; margin: 10px 0;">{prom_sin_calificar:.2f}%</div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        with col3_cc:
+            st.write(f"""
+                <div style="background: linear-gradient(135deg, #28a745 0%, #51cf66 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">✅ Promedio Exactitud</div>
+                    <div style="font-size: 2.5rem; font-weight: bold; margin: 10px 0;">{prom_exactitud:.2f}%</div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        st.markdown("### 📋 Detalles por Agente")
 
-        st.dataframe(
-
-            df_control_calidad,
-
-            use_container_width=True,
-
-            hide_index=True
-
-        )
+        # Crear tabla HTML personalizada con estilo mejorado
+        html_tabla = """
+        <style>
+            .tabla-calidad {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-size: 13px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                border-radius: 8px;
+                overflow: hidden;
+                background-color: white;
+            }
+            .tabla-calidad thead {
+                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+                color: white;
+            }
+            .tabla-calidad th {
+                padding: 14px 10px;
+                text-align: center;
+                font-weight: bold;
+                letter-spacing: 0.5px;
+            }
+            .tabla-calidad tbody tr {
+                border-bottom: 1px solid #e9ecef;
+            }
+            .tabla-calidad tbody tr:hover {
+                background-color: #f8f9ff;
+            }
+            .tabla-calidad tbody tr:nth-child(even) {
+                background-color: #f8f9fa;
+            }
+            .tabla-calidad td {
+                padding: 12px 10px;
+                text-align: center;
+            }
+            .agente-col {
+                text-align: left;
+                font-weight: 500;
+                color: #333;
+            }
+            .leads-col {
+                font-weight: bold;
+                color: #667eea;
+            }
+            .notificado-alto { color: #dc3545; font-weight: bold; }
+            .notificado-medio { color: #fd7e14; font-weight: bold; }
+            .notificado-bajo { color: #28a745; font-weight: bold; }
+            .exactitud-bajo { color: #dc3545; font-weight: bold; }
+            .exactitud-medio { color: #fd7e14; font-weight: bold; }
+            .exactitud-alto { color: #28a745; font-weight: bold; }
+        </style>
+        <table class="tabla-calidad">
+            <thead>
+                <tr>
+                    <th>Agente</th>
+                    <th>Leads</th>
+                    <th>Sin Cal. Q</th>
+                    <th>Sin Cal. %</th>
+                    <th>Exactitud Q</th>
+                    <th>Exactitud %</th>
+                </tr>
+            </thead>
+            <tbody>
+        """
+        
+        for idx, row in df_control_calidad.iterrows():
+            agente = str(row['Agente']).strip()
+            leads = int(row['Leads'])
+            notif_q = int(row['Notificado Q'])
+            notif_pct_str = str(row['Notificado %']).rstrip('%').strip()
+            exact_q = int(row['Exactitud Q'])
+            exact_pct_str = str(row['Exactitud %']).rstrip('%').strip()
+            
+            try:
+                notif_pct = float(notif_pct_str)
+                exact_pct = float(exact_pct_str)
+            except:
+                notif_pct = 0
+                exact_pct = 0
+            
+            # Determinar clase para Sin Calificar
+            if notif_pct > 10:
+                notif_clase = "notificado-alto"
+            elif notif_pct > 5:
+                notif_clase = "notificado-medio"
+            else:
+                notif_clase = "notificado-bajo"
+            
+            # Determinar clase para Exactitud
+            if exact_pct >= 90:
+                exact_clase = "exactitud-alto"
+            elif exact_pct >= 80:
+                exact_clase = "exactitud-medio"
+            else:
+                exact_clase = "exactitud-bajo"
+            
+            html_tabla += f'<tr><td class="agente-col">{agente}</td><td class="leads-col">{leads}</td><td>{notif_q}</td><td class="{notif_clase}">{notif_pct_str}%</td><td>{exact_q}</td><td class="{exact_clase}">{exact_pct_str}%</td></tr>'
+        
+        html_tabla += '</tbody></table>'
+        
+        st.markdown(html_tabla, unsafe_allow_html=True)
 
     else:
 
