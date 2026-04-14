@@ -1539,6 +1539,104 @@ def calcular_resumen_progreso_agentes(df_progreso):
 
 
 @st.cache_data
+def cargar_datos_semanas():
+
+    """Carga datos de calificación por semana"""
+
+    excel_file_data = encuentra_archivo_excel('CONTROL DE AUDITORIAS.xlsx')
+    excel_file_calidad = encuentra_archivo_excel('REPORTE CALIDAD.xlsx')
+
+    if excel_file_data is None or excel_file_calidad is None:
+
+        return pd.DataFrame()
+
+    
+
+    try:
+
+        # Leer datos de calidad
+        df_cc = pd.read_excel(excel_file_calidad, sheet_name=0)
+        # Parsear fecha con formato correcto
+        df_cc['Fecha'] = pd.to_datetime(df_cc['Fecha'], format='%d/%m/%Y', errors='coerce')
+        df_cc['Día'] = df_cc['Fecha'].dt.day
+        
+        # Función para asignar semana
+        def asignar_semana(dia):
+            if pd.isna(dia):
+                return None
+            dia = int(dia)
+            if 1 <= dia <= 7:
+                return 'S1'
+            elif 8 <= dia <= 14:
+                return 'S2'
+            elif 15 <= dia <= 21:
+                return 'S3'
+            elif 22 <= dia <= 28:
+                return 'S4'
+            else:
+                return 'S5'
+        
+        df_cc['Semana'] = df_cc['Día'].apply(asignar_semana)
+        
+        # Contar Sin Calificar por agente y semana
+        df_sin = df_cc[df_cc['STATUS'] == 'SIN CALIFICAR'].copy()
+        sin_por_semana = df_sin.groupby(['AGENTE', 'Semana']).size().reset_index(name='Sin_Calif')
+        
+        # Contar Exactitud (todo lo que NO es SIN CALIFICAR)
+        df_exactitud = df_cc[df_cc['STATUS'] != 'SIN CALIFICAR'].copy()
+        exactitud_por_semana = df_exactitud.groupby(['AGENTE', 'Semana']).size().reset_index(name='Exactitud')
+        
+        # Merge sin y exactitud
+        semanas_data = sin_por_semana.merge(exactitud_por_semana, on=['AGENTE', 'Semana'], how='outer')
+        semanas_data = semanas_data.fillna(0).astype({'Sin_Calif': int, 'Exactitud': int})
+        
+        # Pivotar para cada tipo
+        sin_pivot = semanas_data.pivot(index='AGENTE', columns='Semana', values='Sin_Calif').reset_index()
+        exactitud_pivot = semanas_data.pivot(index='AGENTE', columns='Semana', values='Exactitud').reset_index()
+        
+        # Asegurar que todas las semanas existan (llenar con 0 si no hay datos)
+        for semana in ['S1', 'S2', 'S3', 'S4', 'S5']:
+            if semana not in sin_pivot.columns:
+                sin_pivot[semana] = 0
+            if semana not in exactitud_pivot.columns:
+                exactitud_pivot[semana] = 0
+        
+        # Renombrar columnas semanas a Sin_S y Exactitud_S
+        sin_pivot = sin_pivot.rename(columns={'S1': 'Sin_S1', 'S2': 'Sin_S2', 'S3': 'Sin_S3', 'S4': 'Sin_S4', 'S5': 'Sin_S5'})
+        exactitud_pivot = exactitud_pivot.rename(columns={'S1': 'Exactitud_S1', 'S2': 'Exactitud_S2', 'S3': 'Exactitud_S3', 'S4': 'Exactitud_S4', 'S5': 'Exactitud_S5'})
+        
+        # Renombrar columna AGENTE a Agente
+        sin_pivot.rename(columns={'AGENTE': 'Agente'}, inplace=True)
+        exactitud_pivot.rename(columns={'AGENTE': 'Agente'}, inplace=True)
+        
+        # Merge sin y exactitud
+        resultado = sin_pivot.merge(exactitud_pivot, on='Agente', how='outer')
+        resultado = resultado.fillna(0)
+        
+        # Agregar Leads
+        leads_count = df_cc['AGENTE'].value_counts().reset_index()
+        leads_count.columns = ['Agente', 'Leads']
+        resultado = resultado.merge(leads_count, on='Agente', how='left')
+        resultado['Leads'] = resultado['Leads'].fillna(0).astype(int)
+        
+        # Reordenar columnas (Sin S1, Exactitud S1, Sin S2, Exactitud S2, ...)
+        col_order = ['Agente', 'Leads']
+        for i in range(1, 6):
+            col_order.append(f'Sin_S{i}')
+            col_order.append(f'Exactitud_S{i}')
+        
+        resultado = resultado[[col for col in col_order if col in resultado.columns]]
+        resultado = resultado.sort_values('Agente').reset_index(drop=True)
+        
+        return resultado
+
+    except Exception as e:
+        st.error(f"Error al cargar datos de semanas: {str(e)}")
+        return pd.DataFrame()
+
+
+
+@st.cache_data
 
 def cargar_datos_control_calidad():
 
@@ -1628,51 +1726,33 @@ def cargar_datos_control_calidad():
 
         
 
-        # Contar exactitud (CORRECTO, EXACTITUD o VALIDACION COBERTURA)
+        # Contar SIN CALIFICAR
 
-        df_exactitud = df[
+        df_sin_calificar = df[df['STATUS'] == 'SIN CALIFICAR']
 
-            (df['STATUS'].isin(['CORRECTO', 'EXACTITUD', 'VALIDACION COBERTURA']))
+        sin_calificar_por_agente = df_sin_calificar['AGENTE'].value_counts().reset_index()
 
-        ]
-
-        exactitud_por_agente = df_exactitud['AGENTE'].value_counts().reset_index()
-
-        exactitud_por_agente.columns = ['Agente', 'Exactitud Q']
+        sin_calificar_por_agente.columns = ['Agente', 'Notificado Q']
 
         
 
-        # Contar notificados (SIN CALIFICAR - lo restante)
-
-        df_notificado = df[df['STATUS'] == 'SIN CALIFICAR']
-
-        notificado_por_agente = df_notificado['AGENTE'].value_counts().reset_index()
-
-        notificado_por_agente.columns = ['Agente', 'Notificado Q']
-
-        
-
-        # Combinar todos los datos
+        # Combinar datos
 
         resultado = leads_por_agente.copy()
 
-        resultado = resultado.merge(notificado_por_agente, on='Agente', how='left')
-
-        resultado = resultado.merge(exactitud_por_agente, on='Agente', how='left')
+        resultado = resultado.merge(sin_calificar_por_agente, on='Agente', how='left')
 
         
 
-        # Llenar NaN con 0
+        # Llenar NaN con 0 en Notificado Q
 
-        resultado = resultado.fillna(0)
+        resultado['Notificado Q'] = resultado['Notificado Q'].fillna(0).astype(int)
 
         
 
-        # Convertir a enteros
+        # Calcular Exactitud Q = Total Leads - Sin Calificar
 
-        resultado['Notificado Q'] = resultado['Notificado Q'].astype(int)
-
-        resultado['Exactitud Q'] = resultado['Exactitud Q'].astype(int)
+        resultado['Exactitud Q'] = resultado['Leads'] - resultado['Notificado Q']
 
         
 
@@ -1725,6 +1805,8 @@ df_vista_semanal = generar_vista_semanal(df_progreso_procesado)
 df_resumen_progreso = calcular_resumen_progreso_agentes(df_progreso_procesado)
 
 df_control_calidad = cargar_datos_control_calidad()
+
+df_semanas = cargar_datos_semanas()
 
 
 # ✅ FILTRO GLOBAL POR MES
@@ -3167,6 +3249,162 @@ with tab_control_calidad:
         html_tabla += '</tbody></table>'
         
         st.markdown(html_tabla, unsafe_allow_html=True)
+        
+        # Tabla de Semanas
+        st.markdown("---")
+        st.markdown("### 📅 Calificación por Semana (Sin Calificar vs Exactitud)")
+        
+        # Filtros
+        col_filtro1, col_filtro2 = st.columns([1, 2])
+        
+        with col_filtro1:
+            tipo_filtro = st.radio(
+                "Mostrar:",
+                options=["Ambos", "Solo Sin Calificar", "Solo Exactitud"],
+                horizontal=False,
+                key="filtro_semanas"
+            )
+        
+        with col_filtro2:
+            agentes_lista = ["Todos"] + sorted(df_semanas['Agente'].unique().tolist())
+            agente_seleccionado = st.selectbox(
+                "Seleccionar Agente:",
+                options=agentes_lista,
+                key="filtro_agente_semanas"
+            )
+        
+        if not df_semanas.empty:
+            # Filtrar por agente si es necesario
+            if agente_seleccionado == "Todos":
+                df_mostrar_semanas = df_semanas.copy()
+            else:
+                df_mostrar_semanas = df_semanas[df_semanas['Agente'] == agente_seleccionado].copy()
+            
+            # CSS base para la tabla
+            css_estilos = """
+            <style>
+                .tabla-semanas {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 15px 0;
+                    font-size: 12px;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                }
+                .tabla-semanas thead {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                }
+                .tabla-semanas th {
+                    padding: 10px;
+                    text-align: center;
+                    font-weight: bold;
+                    border: 1px solid #e0e0e0;
+                }
+                .tabla-semanas tbody tr {
+                    border-bottom: 1px solid #e0e0e0;
+                }
+                .tabla-semanas tbody tr:hover {
+                    background-color: #f5f5f5;
+                }
+                .tabla-semanas tbody tr:nth-child(even) {
+                    background-color: #fafafa;
+                }
+                .tabla-semanas td {
+                    padding: 10px;
+                    text-align: center;
+                    border: 1px solid #e0e0e0;
+                }
+                .agente-col {
+                    text-align: left;
+                    font-weight: 600;
+                    color: #333;
+                }
+                .leads-col {
+                    font-weight: bold;
+                    color: #2196F3;
+                    background-color: #e3f2fd;
+                }
+                .sin-col {
+                    color: #fff;
+                    background-color: #f44336;
+                    font-weight: bold;
+                }
+                .exactitud-col {
+                    color: #fff;
+                    background-color: #4caf50;
+                    font-weight: bold;
+                }
+            </style>
+            """
+            
+            html_tabla = css_estilos
+            
+            # Verificar si hay datos después del filtro
+            if df_mostrar_semanas.empty:
+                if agente_seleccionado == "Todos":
+                    st.info("No hay datos disponibles de semanas.")
+                else:
+                    st.info(f"No hay datos para el agente: {agente_seleccionado}")
+            else:
+                # Generar tabla según el filtro
+                if tipo_filtro == "Ambos":
+                    html_tabla += '<table class="tabla-semanas"><thead><tr>'
+                    html_tabla += '<th rowspan="2">Agente</th><th rowspan="2">Leads</th>'
+                    html_tabla += '<th colspan="2">S1</th><th colspan="2">S2</th><th colspan="2">S3</th><th colspan="2">S4</th><th colspan="2">S5</th>'
+                    html_tabla += '</tr><tr>'
+                    for _ in range(5):
+                        html_tabla += '<th>Sin</th><th>Exact</th>'
+                    html_tabla += '</tr></thead><tbody>'
+                    
+                    for idx, row in df_mostrar_semanas.iterrows():
+                        agente = str(row['Agente']).strip()
+                        leads = int(row['Leads']) if pd.notna(row['Leads']) else 0
+                        
+                        html_tabla += f'<tr><td class="agente-col">{agente}</td><td class="leads-col">{leads}</td>'
+                        
+                        for i in range(1, 6):
+                            sin_val = int(row[f'Sin_S{i}']) if pd.notna(row[f'Sin_S{i}']) else 0
+                            exact_val = int(row[f'Exactitud_S{i}']) if pd.notna(row[f'Exactitud_S{i}']) else 0
+                            html_tabla += f'<td class="sin-col">{sin_val}</td><td class="exactitud-col">{exact_val}</td>'
+                        
+                        html_tabla += '</tr>'
+                
+                elif tipo_filtro == "Solo Sin Calificar":
+                    html_tabla += '<table class="tabla-semanas"><thead><tr>'
+                    html_tabla += '<th>Agente</th><th>Leads</th><th>S1</th><th>S2</th><th>S3</th><th>S4</th><th>S5</th>'
+                    html_tabla += '</tr></thead><tbody>'
+                    
+                    for idx, row in df_mostrar_semanas.iterrows():
+                        agente = str(row['Agente']).strip()
+                        leads = int(row['Leads']) if pd.notna(row['Leads']) else 0
+                        
+                        html_tabla += f'<tr><td class="agente-col">{agente}</td><td class="leads-col">{leads}</td>'
+                        
+                        for i in range(1, 6):
+                            sin_val = int(row[f'Sin_S{i}']) if pd.notna(row[f'Sin_S{i}']) else 0
+                            html_tabla += f'<td class="sin-col">{sin_val}</td>'
+                        
+                        html_tabla += '</tr>'
+                
+                else:  # Solo Exactitud
+                    html_tabla += '<table class="tabla-semanas"><thead><tr>'
+                    html_tabla += '<th>Agente</th><th>Leads</th><th>S1</th><th>S2</th><th>S3</th><th>S4</th><th>S5</th>'
+                    html_tabla += '</tr></thead><tbody>'
+                    
+                    for idx, row in df_mostrar_semanas.iterrows():
+                        agente = str(row['Agente']).strip()
+                        leads = int(row['Leads']) if pd.notna(row['Leads']) else 0
+                        
+                        html_tabla += f'<tr><td class="agente-col">{agente}</td><td class="leads-col">{leads}</td>'
+                        
+                        for i in range(1, 6):
+                            exact_val = int(row[f'Exactitud_S{i}']) if pd.notna(row[f'Exactitud_S{i}']) else 0
+                            html_tabla += f'<td class="exactitud-col">{exact_val}</td>'
+                        
+                        html_tabla += '</tr>'
+                
+                html_tabla += '</tbody></table>'
+                st.markdown(html_tabla, unsafe_allow_html=True)
 
     else:
 
