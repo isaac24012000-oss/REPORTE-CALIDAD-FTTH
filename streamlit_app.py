@@ -3349,7 +3349,7 @@ with tab_control_calidad:
                     <th>Exactitud %</th>
                     <th>Validación de Cobertura %</th>
                     <th>No Evaluado %</th>
-                    <th>Total de Desvios</th>
+                    <th>% Total de Desvios</th>
                 </tr>
             </thead>
             <tbody>
