@@ -1935,23 +1935,29 @@ df_validacion_cobertura = cargar_datos_validacion_cobertura()
 df_semanas = cargar_datos_semanas()
 
 
-# ✅ FILTRO GLOBAL POR MES
-excel_file_fecha = encuentra_archivo_excel('CONTROL DE AUDITORIAS.xlsx')
-df_fecha = pd.DataFrame()
+# ✅ FILTRO POR MES - REPORTE CALIDAD
+# Extraer meses disponibles de REPORTE CALIDAD.xlsx
+excel_file_calidad = encuentra_archivo_excel('REPORTE CALIDAD.xlsx')
 meses_disponibles = []
 mes_filtro_global = None
+mes_numero_filtro = None
+año_filtro = None
 
-if excel_file_fecha:
+if excel_file_calidad:
     try:
-        df_fecha = pd.read_excel(excel_file_fecha, sheet_name='Progreso_Fecha')
-        # Convertir columna Fecha a datetime
-        if 'Fecha' in df_fecha.columns:
-            df_fecha['Fecha'] = pd.to_datetime(df_fecha['Fecha'], errors='coerce')
-            df_fecha['Mes'] = df_fecha['Fecha'].dt.strftime('%B %Y')
-            # Obtener meses únicos y ordenarlos
-            meses_disponibles = sorted(df_fecha['Mes'].dropna().unique(), reverse=True)
-    except:
-        pass
+        df_calidad_fechas = pd.read_excel(excel_file_calidad, sheet_name=0)
+        # Convertir columna Fecha a datetime (formato DD/MM/YYYY)
+        if 'Fecha' in df_calidad_fechas.columns:
+            df_calidad_fechas['Fecha'] = pd.to_datetime(df_calidad_fechas['Fecha'], format='%d/%m/%Y', errors='coerce')
+            df_calidad_fechas['Mes_Texto'] = df_calidad_fechas['Fecha'].dt.strftime('%m/%Y')  # MM/YYYY
+            df_calidad_fechas['Mes_Num'] = df_calidad_fechas['Fecha'].dt.month
+            df_calidad_fechas['Año'] = df_calidad_fechas['Fecha'].dt.year
+            # Obtener meses únicos y ordenarlos (más recientes primero)
+            meses_unicos = df_calidad_fechas[['Mes_Texto', 'Mes_Num', 'Año']].drop_duplicates()
+            meses_unicos = meses_unicos.sort_values(['Año', 'Mes_Num'], ascending=[False, False])
+            meses_disponibles = meses_unicos['Mes_Texto'].tolist()
+    except Exception as e:
+        st.warning(f"Error al procesar fechas de REPORTE CALIDAD: {str(e)}")
 
 # --- Mostrar selector de mes (UI)
 st.markdown("## 📊 Dashboard - Control de Auditorías")
@@ -1961,16 +1967,159 @@ col_filtro, col_info = st.columns([3, 6])
 
 with col_filtro:
     if meses_disponibles:
-        mes_filtro_global = st.selectbox("📅 **Filtrar por mes:**", meses_disponibles, index=0, key="filtro_mes_global")
+        mes_filtro_global = st.selectbox("📅 **Filtrar por mes (MM/YYYY):**", meses_disponibles, index=0, key="filtro_mes_global")
+        # Extraer mes y año del filtro seleccionado
+        if mes_filtro_global:
+            parts = mes_filtro_global.split('/')
+            mes_numero_filtro = int(parts[0])
+            año_filtro = int(parts[1])
     else:
         st.info("No hay datos de fechas disponibles")
 
-# Aplicar filtro global a df_data
-if mes_filtro_global:
-    agentes_mes_global = df_fecha[df_fecha['Mes'] == mes_filtro_global]['Agentes Zimach'].unique()
-    df_data = df_data[df_data['Agentes Zimach'].isin(agentes_mes_global)].copy()
+# Aplicar filtro de mes SOLO a datos de REPORTE CALIDAD
+if mes_filtro_global and mes_numero_filtro and año_filtro:
+    # Filtrar datos de semanas (de REPORTE CALIDAD)
+    if not df_semanas.empty and 'Agente' in df_semanas.columns:
+        try:
+            # Recargar df_semanas filtrado por mes
+            excel_file_data = encuentra_archivo_excel('CONTROL DE AUDITORIAS.xlsx')
+            excel_file_cal = encuentra_archivo_excel('REPORTE CALIDAD.xlsx')
+            if excel_file_data and excel_file_cal:
+                df_cc = pd.read_excel(excel_file_cal, sheet_name=0)
+                df_cc = df_cc[df_cc['AGENTE'] != 'Sin agente'].copy()
+                df_cc['Fecha'] = pd.to_datetime(df_cc['Fecha'], format='%d/%m/%Y', errors='coerce')
+                df_cc['Día'] = df_cc['Fecha'].dt.day
+                df_cc['Mes'] = df_cc['Fecha'].dt.month
+                df_cc['Año'] = df_cc['Fecha'].dt.year
+                
+                # Filtrar por mes y año
+                df_cc = df_cc[(df_cc['Mes'] == mes_numero_filtro) & (df_cc['Año'] == año_filtro)].copy()
+                
+                # Función para asignar semana
+                def asignar_semana(dia):
+                    if dia <= 7:
+                        return 'S1'
+                    elif dia <= 14:
+                        return 'S2'
+                    elif dia <= 21:
+                        return 'S3'
+                    elif dia <= 28:
+                        return 'S4'
+                    else:
+                        return 'S5'
+                
+                df_cc['Semana'] = df_cc['Día'].apply(asignar_semana)
+                
+                # Contar Sin Calificar por agente y semana
+                df_sin = df_cc[df_cc['STATUS'] == 'SIN CALIFICAR'].copy()
+                sin_por_semana = df_sin.groupby(['AGENTE', 'Semana']).size().reset_index(name='Sin_Calif')
+                
+                # Contar Exactitud
+                df_exactitud = df_cc[df_cc['STATUS'] == 'EXACTITUD'].copy()
+                exactitud_por_semana = df_exactitud.groupby(['AGENTE', 'Semana']).size().reset_index(name='Exactitud')
+                
+                # Merge
+                semanas_data = sin_por_semana.merge(exactitud_por_semana, on=['AGENTE', 'Semana'], how='outer')
+                semanas_data = semanas_data.fillna(0).astype({'Sin_Calif': int, 'Exactitud': int})
+                
+                # Pivotar
+                sin_pivot = semanas_data.pivot(index='AGENTE', columns='Semana', values='Sin_Calif').reset_index()
+                exactitud_pivot = semanas_data.pivot(index='AGENTE', columns='Semana', values='Exactitud').reset_index()
+                
+                # Asegurar semanas
+                for semana in ['S1', 'S2', 'S3', 'S4', 'S5']:
+                    if semana not in sin_pivot.columns:
+                        sin_pivot[semana] = 0
+                    if semana not in exactitud_pivot.columns:
+                        exactitud_pivot[semana] = 0
+                
+                sin_pivot = sin_pivot.rename(columns={'S1': 'Sin_S1', 'S2': 'Sin_S2', 'S3': 'Sin_S3', 'S4': 'Sin_S4', 'S5': 'Sin_S5'})
+                exactitud_pivot = exactitud_pivot.rename(columns={'S1': 'Exactitud_S1', 'S2': 'Exactitud_S2', 'S3': 'Exactitud_S3', 'S4': 'Exactitud_S4', 'S5': 'Exactitud_S5'})
+                
+                sin_pivot.rename(columns={'AGENTE': 'Agente'}, inplace=True)
+                exactitud_pivot.rename(columns={'AGENTE': 'Agente'}, inplace=True)
+                
+                df_semanas = sin_pivot.merge(exactitud_pivot, on='Agente', how='outer').fillna(0)
+                leads_count = df_cc['AGENTE'].value_counts().reset_index()
+                leads_count.columns = ['Agente', 'Leads']
+                df_semanas = df_semanas.merge(leads_count, on='Agente', how='left').fillna(0)
+        except:
+            pass
+    
+    # Filtrar datos de control de calidad (REPORTE CALIDAD)
+    if not df_control_calidad.empty and 'Agente' in df_control_calidad.columns:
+        try:
+            excel_file = encuentra_archivo_excel('REPORTE CALIDAD.xlsx')
+            if excel_file:
+                df = pd.read_excel(excel_file, sheet_name=0)
+                df = df[df['AGENTE'] != 'Sin agente'].copy()
+                df['Fecha'] = pd.to_datetime(df['Fecha'], format='%d/%m/%Y', errors='coerce')
+                df['Mes'] = df['Fecha'].dt.month
+                df['Año'] = df['Fecha'].dt.year
+                df = df[(df['Mes'] == mes_numero_filtro) & (df['Año'] == año_filtro)].copy()
+                
+                leads_por_agente = df['AGENTE'].value_counts().reset_index()
+                leads_por_agente.columns = ['Agente', 'Leads']
+                
+                df_sin_calificar = df[df['STATUS'] == 'SIN CALIFICAR']
+                sin_calificar_por_agente = df_sin_calificar['AGENTE'].value_counts().reset_index()
+                sin_calificar_por_agente.columns = ['Agente', 'Sin Calificar Q']
+                
+                df_exactitud = df[df['STATUS'] == 'EXACTITUD']
+                exactitud_por_agente = df_exactitud['AGENTE'].value_counts().reset_index()
+                exactitud_por_agente.columns = ['Agente', 'Exactitud Q']
+                
+                resultado = leads_por_agente.copy()
+                resultado = resultado.merge(sin_calificar_por_agente, on='Agente', how='left')
+                resultado = resultado.merge(exactitud_por_agente, on='Agente', how='left')
+                resultado['Sin Calificar Q'] = resultado['Sin Calificar Q'].fillna(0).astype(int)
+                resultado['Exactitud Q'] = resultado['Exactitud Q'].fillna(0).astype(int)
+                resultado['Sin Calificar %'] = (resultado['Sin Calificar Q'] / resultado['Leads'] * 100).round(2).astype(str) + '%'
+                resultado['Exactitud %'] = (resultado['Exactitud Q'] / resultado['Leads'] * 100).round(2).astype(str) + '%'
+                resultado = resultado[['Agente', 'Leads', 'Sin Calificar Q', 'Sin Calificar %', 'Exactitud Q', 'Exactitud %']]
+                resultado = resultado.sort_values('Agente').reset_index(drop=True)
+                df_control_calidad = resultado
+        except:
+            pass
+    
+    # Filtrar datos de validación de cobertura (REPORTE CALIDAD)
+    if not df_validacion_cobertura.empty and 'Agente' in df_validacion_cobertura.columns:
+        try:
+            excel_file = encuentra_archivo_excel('REPORTE CALIDAD.xlsx')
+            if excel_file:
+                df = pd.read_excel(excel_file, sheet_name=0)
+                df = df[df['AGENTE'] != 'Sin agente'].copy()
+                df['Fecha'] = pd.to_datetime(df['Fecha'], format='%d/%m/%Y', errors='coerce')
+                df['Mes'] = df['Fecha'].dt.month
+                df['Año'] = df['Fecha'].dt.year
+                df = df[(df['Mes'] == mes_numero_filtro) & (df['Año'] == año_filtro)].copy()
+                
+                leads_por_agente = df['AGENTE'].value_counts().reset_index()
+                leads_por_agente.columns = ['Agente', 'Total Leads']
+                
+                df_validacion = df[df['STATUS'] == 'VALIDACION COBERTURA']
+                validacion_por_agente = df_validacion['AGENTE'].value_counts().reset_index()
+                validacion_por_agente.columns = ['Agente', 'Validacion Cobertura']
+                
+                df_no_evaluado = df[df['STATUS'].isna()]
+                no_evaluado_por_agente = df_no_evaluado['AGENTE'].value_counts().reset_index()
+                no_evaluado_por_agente.columns = ['Agente', 'No Evaluado']
+                
+                resultado = leads_por_agente.copy()
+                resultado = resultado.merge(validacion_por_agente, on='Agente', how='left')
+                resultado = resultado.merge(no_evaluado_por_agente, on='Agente', how='left')
+                resultado['Validacion Cobertura'] = resultado['Validacion Cobertura'].fillna(0).astype(int)
+                resultado['No Evaluado'] = resultado['No Evaluado'].fillna(0).astype(int)
+                resultado['Validacion Cobertura %'] = (resultado['Validacion Cobertura'] / resultado['Total Leads'] * 100).round(2)
+                resultado['No Evaluado %'] = (resultado['No Evaluado'] / resultado['Total Leads'] * 100).round(2)
+                resultado = resultado.sort_values('Validacion Cobertura %', ascending=False).reset_index(drop=True)
+                df_validacion_cobertura = resultado
+        except:
+            pass
+    
+    # Mostrar información del filtro
     with col_info:
-        st.info(f"📊 Mostrando datos de **{mes_filtro_global}** | Agentes: {len(agentes_mes_global)}")
+        st.success(f"📅 Datos de REPORTE CALIDAD filtrados por: **{mes_filtro_global}**")
 
 st.markdown("---")
 
@@ -2009,15 +2158,6 @@ if excel_file:
 else:
     total_agentes = 0
     conv_promedio = 0
-
-
-
-# Header
-
-st.markdown("## 📊 Dashboard - Control de Auditorías")
-
-st.markdown("*Análisis de desempeño de agentes y métricas de calidad*")
-
 
 
 # Verificar archivos necesarios
@@ -3254,7 +3394,7 @@ with tab_control_calidad:
         with col2_cc:
             st.write(f"""
                 <div style="background: linear-gradient(135deg, #1e90ff 0%, #4169e1 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                    <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">🎯 Total Barrido</div>
+                    <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">🎯 TOTAL DE DESVIOS</div>
                     <div style="font-size: 2.5rem; font-weight: bold; margin: 10px 0;">{barrido_pct:.2f}%</div>
                 </div>
             """, unsafe_allow_html=True)
@@ -3361,15 +3501,49 @@ with tab_control_calidad:
         df_tabla['Validacion Cobertura %'] = df_tabla['Validacion Cobertura %'].fillna(0)
         df_tabla['No Evaluado %'] = df_tabla['No Evaluado %'].fillna(0)
         
-        # Calcular Total de Desvios para cada fila
-        df_tabla['Total Desvios'] = df_tabla.apply(
-            lambda row: (
-                float(str(row['Sin Calificar %']).rstrip('%').strip() or 0) +
-                float(str(row['Exactitud %']).rstrip('%').strip() or 0) +
-                float(row['Validacion Cobertura %'])
-            ),
-            axis=1
-        )
+        # Calcular Total de Desvios (casos tipificados / total leads * 100)
+        # Recargar datos del Excel para hacer el cálculo correcto
+        try:
+            excel_file = encuentra_archivo_excel('REPORTE CALIDAD.xlsx')
+            if excel_file:
+                df_raw = pd.read_excel(excel_file, sheet_name=0)
+                df_raw = df_raw[df_raw['AGENTE'] != 'Sin agente'].copy()
+                df_raw['Fecha'] = pd.to_datetime(df_raw['Fecha'], format='%d/%m/%Y', errors='coerce')
+                df_raw['Mes'] = df_raw['Fecha'].dt.month
+                df_raw['Año'] = df_raw['Fecha'].dt.year
+                df_raw = df_raw[(df_raw['Mes'] == mes_numero_filtro) & (df_raw['Año'] == año_filtro)].copy()
+                
+                # Calcular casos tipificados por agente (todos excepto nulls)
+                casos_tipificados = df_raw[df_raw['STATUS'].notna()].groupby('AGENTE').size().reset_index(name='Tipificados')
+                total_por_agente = df_raw['AGENTE'].value_counts().reset_index()
+                total_por_agente.columns = ['AGENTE', 'Total']
+                
+                desvios_data = casos_tipificados.merge(total_por_agente, left_on='AGENTE', right_on='AGENTE', how='left')
+                desvios_data.columns = ['Agente', 'Tipificados', 'Total']
+                desvios_data['Total Desvios'] = (desvios_data['Tipificados'] / desvios_data['Total'] * 100).round(2)
+                
+                # Merge con df_tabla
+                df_tabla = df_tabla.merge(desvios_data[['Agente', 'Total Desvios']], on='Agente', how='left')
+            else:
+                # Si no se puede recargar, usar suma de porcentajes como fallback
+                df_tabla['Total Desvios'] = df_tabla.apply(
+                    lambda row: (
+                        float(str(row['Sin Calificar %']).rstrip('%').strip() or 0) +
+                        float(str(row['Exactitud %']).rstrip('%').strip() or 0) +
+                        float(row['Validacion Cobertura %'])
+                    ),
+                    axis=1
+                )
+        except:
+            # Fallback: usar suma de porcentajes
+            df_tabla['Total Desvios'] = df_tabla.apply(
+                lambda row: (
+                    float(str(row['Sin Calificar %']).rstrip('%').strip() or 0) +
+                    float(str(row['Exactitud %']).rstrip('%').strip() or 0) +
+                    float(row['Validacion Cobertura %'])
+                ),
+                axis=1
+            )
         
         # Ordenar por Total de Desvios descendente (mayor a menor)
         df_tabla = df_tabla.sort_values('Total Desvios', ascending=False).reset_index(drop=True)
@@ -3529,42 +3703,73 @@ with tab_control_calidad:
                 
                 st.plotly_chart(fig, use_container_width=True)
                 
-                # Gráfico de barras - Cumplimiento de KPI por Agente
+                # Gráfico de barras - % Total de Desvios por Agente
                 st.markdown("---")
-                st.markdown("### 📊 Cumplimiento de KPI % por Agente")
+                st.markdown("### 📊 % Total de Desvios por Agente (Casos Tipificados)")
                 
-                # Cargar datos de KPI
-                df_kpi = cargar_datos_kpi()
+                # Calcular % Total de Desvios (casos tipificados / total leads) filtrado por mes
+                if mes_filtro_global and mes_numero_filtro and año_filtro:
+                    try:
+                        excel_file = encuentra_archivo_excel('REPORTE CALIDAD.xlsx')
+                        if excel_file:
+                            df_raw = pd.read_excel(excel_file, sheet_name=0)
+                            df_raw = df_raw[df_raw['AGENTE'] != 'Sin agente'].copy()
+                            df_raw['Fecha'] = pd.to_datetime(df_raw['Fecha'], format='%d/%m/%Y', errors='coerce')
+                            df_raw['Mes'] = df_raw['Fecha'].dt.month
+                            df_raw['Año'] = df_raw['Fecha'].dt.year
+                            df_raw = df_raw[(df_raw['Mes'] == mes_numero_filtro) & (df_raw['Año'] == año_filtro)].copy()
+                            
+                            # Contar total de leads por agente
+                            total_por_agente = df_raw['AGENTE'].value_counts().reset_index()
+                            total_por_agente.columns = ['Agente', 'Total']
+                            
+                            # Contar CASOS TIPIFICADOS (STATUS no es nulo)
+                            df_tipificados = df_raw[df_raw['STATUS'].notna()]
+                            tipificados_por_agente = df_tipificados['AGENTE'].value_counts().reset_index()
+                            tipificados_por_agente.columns = ['Agente', 'Tipificados']
+                            
+                            # Combinar datos
+                            resultado = total_por_agente.copy()
+                            resultado = resultado.merge(tipificados_por_agente, on='Agente', how='left')
+                            resultado['Tipificados'] = resultado['Tipificados'].fillna(0).astype(int)
+                            resultado['% Desvios'] = (resultado['Tipificados'] / resultado['Total'] * 100).round(2)
+                            resultado = resultado.sort_values('% Desvios', ascending=False).reset_index(drop=True)
+                            
+                            df_barras = resultado
+                        else:
+                            df_barras = pd.DataFrame()
+                    except Exception as e:
+                        df_barras = pd.DataFrame()
+                else:
+                    df_barras = pd.DataFrame()
                 
-                if not df_kpi.empty:
+                if not df_barras.empty:
                     import plotly.graph_objects as go
-                    
-                    # Datos ya ordenados de mayor a menor
-                    df_barras = df_kpi.copy()
                     
                     # Definir colores según el porcentaje
                     colores = []
-                    for val in df_barras['KPI %']:
-                        if val >= 90:
-                            colores.append('#28a745')  # Verde
-                        elif val >= 70:
-                            colores.append('#fd7e14')  # Naranja
+                    for val in df_barras['% Desvios']:
+                        if val >= 95:
+                            colores.append('#28a745')  # Verde - Excelente
+                        elif val >= 85:
+                            colores.append('#fd7e14')  # Naranja - Moderado
                         else:
-                            colores.append('#dc3545')  # Rojo
+                            colores.append('#dc3545')  # Rojo - Bajo
                     
                     fig_barras = go.Figure(data=[
                         go.Bar(
                             x=df_barras['Agente'],
-                            y=df_barras['KPI %'],
+                            y=df_barras['% Desvios'],
                             marker=dict(color=colores),
-                            text=df_barras['KPI %'].round(2),
+                            text=df_barras['% Desvios'].round(2),
                             textposition='outside',
-                            hovertemplate='<b>%{x}</b><br>Cumplimiento de KPI: %{y:.2f}%<extra></extra>'
+                            hovertemplate='<b>%{x}</b><br>Casos Tipificados: %{customdata[0]}<br>Total Leads: %{customdata[1]}<br>% Desvios: %{y:.2f}%<extra></extra>',
+                            customdata=df_barras[['Tipificados', 'Total']].values
                         )
                     ])
                     
                     fig_barras.update_layout(
-                        title="Cumplimiento de KPI (Correctos) por Agente",
+                        title="% Total de Desvios por Agente (Casos Tipificados / Total Leads)",
                         xaxis_title="Agente",
                         yaxis_title="Porcentaje (%)",
                         height=500,
