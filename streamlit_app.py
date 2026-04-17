@@ -1909,6 +1909,134 @@ def cargar_datos_control_calidad():
         return pd.DataFrame()
 
 
+def cargar_datos_examen_bitel():
+    """Carga datos del CONSOLIDADO EXAMEN BITEL.xlsx"""
+    try:
+        excel_file = encuentra_archivo_excel('CONSOLIDADO EXAMEN BITEL.xlsx')
+        
+        if excel_file is None:
+            st.warning("⚠️ No se encontró el archivo **CONSOLIDADO EXAMEN BITEL.xlsx**")
+            return pd.DataFrame()
+        
+        df = pd.read_excel(excel_file, sheet_name='Resultado_Examen_Calidad')
+        
+        # Limpiar espacios en nombres de columnas
+        df.columns = df.columns.str.strip()
+        
+        # Convertir Fecha a datetime si es string
+        if 'Fecha' in df.columns:
+            df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')
+        
+        return df
+    
+    except Exception as e:
+        st.error(f"Error al cargar datos de EXAMEN BITEL: {str(e)}")
+        return pd.DataFrame()
+
+
+def calcular_kpis_rendimiento_general(df):
+    """Calcula KPIs de rendimiento general"""
+    if df.empty:
+        return {}
+    
+    try:
+        # Promedio global de puntaje
+        promedio_global = df['Puntaje de Evaluacion'].mean() if 'Puntaje de Evaluacion' in df.columns else 0
+        
+        # Porcentaje de aprobación
+        total_evals = len(df)
+        aprobados = len(df[df['Resultado'] == 'Aprobado']) if 'Resultado' in df.columns else 0
+        pct_aprobacion = (aprobados / total_evals * 100) if total_evals > 0 else 0
+        
+        # Distribución por nivel
+        distribucion_nivel = {}
+        if 'Estado Puntaje' in df.columns:
+            distribucion_nivel = df['Estado Puntaje'].value_counts().to_dict()
+        
+        # Promedio por tipo de examen
+        promedio_por_tipo = {}
+        if 'Tipo de Examen' in df.columns and 'Puntaje de Evaluacion' in df.columns:
+            promedio_por_tipo = df.groupby('Tipo de Examen')['Puntaje de Evaluacion'].mean().to_dict()
+        
+        return {
+            'promedio_global': promedio_global,
+            'pct_aprobacion': pct_aprobacion,
+            'total_evaluaciones': total_evals,
+            'distribucion_nivel': distribucion_nivel,
+            'promedio_por_tipo': promedio_por_tipo
+        }
+    except Exception as e:
+        st.error(f"Error calculando KPIs de rendimiento: {str(e)}")
+        return {}
+
+
+def calcular_kpis_por_asesor(df):
+    """Calcula KPIs por asesor"""
+    if df.empty:
+        return pd.DataFrame()
+    
+    try:
+        resultado = []
+        
+        # Agrupar por empleado
+        for empleado in df['Empleado'].unique():
+            df_asesor = df[df['Empleado'] == empleado]
+            
+            # Cantidad de evaluaciones en nivel Bajo
+            evals_bajo = len(df_asesor[df_asesor['Estado Puntaje'] == 'Bajo']) if 'Estado Puntaje' in df_asesor.columns else 0
+            
+            # Total de evaluaciones
+            total_evals = len(df_asesor)
+            
+            # Promedio de puntaje
+            promedio_puntaje = df_asesor['Puntaje de Evaluacion'].mean() if 'Puntaje de Evaluacion' in df_asesor.columns else 0
+            
+            # Porcentaje de aprobación
+            aprobados = len(df_asesor[df_asesor['Resultado'] == 'Aprobado']) if 'Resultado' in df_asesor.columns else 0
+            pct_aprobacion = (aprobados / total_evals * 100) if total_evals > 0 else 0
+            
+            resultado.append({
+                'Asesor': empleado,
+                'Total Evaluaciones': total_evals,
+                'Evals Nivel Bajo': evals_bajo,
+                'Promedio Puntaje': round(promedio_puntaje, 2),
+                '% Aprobación': round(pct_aprobacion, 2),
+                'Tiene Bajo': 'Sí' if evals_bajo > 0 else 'No'
+            })
+        
+        return pd.DataFrame(resultado)
+    
+    except Exception as e:
+        st.error(f"Error calculando KPIs por asesor: {str(e)}")
+        return pd.DataFrame()
+
+
+def calcular_kpis_temporales(df):
+    """Calcula KPIs temporales"""
+    if df.empty:
+        return {}
+    
+    try:
+        # Volumen de evaluaciones realizadas
+        total_evals = len(df)
+        
+        # Análisis por fecha (si existe)
+        evals_por_fecha = {}
+        if 'Fecha' in df.columns:
+            evals_por_fecha = df.groupby(df['Fecha'].dt.date).size().to_dict()
+        
+        # Promedio de evaluaciones por fecha
+        promedio_evals_fecha = total_evals / len(evals_por_fecha) if evals_por_fecha else 0
+        
+        return {
+            'total_evaluaciones': total_evals,
+            'evals_por_fecha': evals_por_fecha,
+            'promedio_evals_fecha': promedio_evals_fecha
+        }
+    except Exception as e:
+        st.error(f"Error calculando KPIs temporales: {str(e)}")
+        return {}
+
 
 # Cargar datos
 
@@ -1933,6 +2061,8 @@ df_control_calidad = cargar_datos_control_calidad()
 df_validacion_cobertura = cargar_datos_validacion_cobertura()
 
 df_semanas = cargar_datos_semanas()
+
+df_examen_bitel = cargar_datos_examen_bitel()
 
 
 # ✅ FILTRO POR MES - REPORTE CALIDAD
@@ -3785,6 +3915,210 @@ with tab_control_calidad:
     else:
 
         st.warning("No hay datos disponibles en el archivo de Control de Calidad.")
+
+    # ========================================
+    # NUEVA SECCIÓN: KPIs EXAMEN BITEL
+    # ========================================
+    
+    st.markdown("---")
+    st.markdown("## 🎓 KPIs de Examen de Calidad BITEL")
+    
+    if not df_examen_bitel.empty:
+        # Calcular KPIs
+        kpis_general = calcular_kpis_rendimiento_general(df_examen_bitel)
+        kpis_asesor = calcular_kpis_por_asesor(df_examen_bitel)
+        kpis_temporal = calcular_kpis_temporales(df_examen_bitel)
+        
+        # SECCIÓN 1: Indicadores de Rendimiento General
+        st.markdown("### 📊 Indicadores de Rendimiento General")
+        
+        col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
+        
+        with col_kpi1:
+            st.write(f"""
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">🎯 Puntaje Promedio</div>
+                    <div style="font-size: 2.2rem; font-weight: bold; margin: 10px 0;">{kpis_general.get('promedio_global', 0):.2f}</div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        with col_kpi2:
+            st.write(f"""
+                <div style="background: linear-gradient(135deg, #28a745 0%, #51cf66 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">✅ % Aprobación</div>
+                    <div style="font-size: 2.2rem; font-weight: bold; margin: 10px 0;">{kpis_general.get('pct_aprobacion', 0):.2f}%</div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        with col_kpi3:
+            st.write(f"""
+                <div style="background: linear-gradient(135deg, #1e90ff 0%, #4169e1 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">📋 Total Evaluaciones</div>
+                    <div style="font-size: 2.2rem; font-weight: bold; margin: 10px 0;">{kpis_general.get('total_evaluaciones', 0)}</div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        with col_kpi4:
+            dist_nivel = kpis_general.get('distribucion_nivel', {})
+            nivel_bajo_count = dist_nivel.get('Bajo', 0)
+            st.write(f"""
+                <div style="background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">⚠️ Evals Nivel Bajo</div>
+                    <div style="font-size: 2.2rem; font-weight: bold; margin: 10px 0;">{nivel_bajo_count}</div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # SECCIÓN 2: Gráficos de Distribución
+        col_grafico1, col_grafico2 = st.columns(2)
+        
+        with col_grafico1:
+            # Gráfico de pastel: Distribución por Nivel
+            dist_nivel = kpis_general.get('distribucion_nivel', {})
+            if dist_nivel:
+                fig_nivel = go.Figure(data=[go.Pie(
+                    labels=list(dist_nivel.keys()),
+                    values=list(dist_nivel.values()),
+                    marker=dict(colors=['#dc3545', '#fd7e14', '#28a745']),
+                    textposition='inside',
+                    textinfo='label+percent'
+                )])
+                fig_nivel.update_layout(
+                    title="Distribución de Evaluaciones por Nivel",
+                    height=400
+                )
+                st.plotly_chart(fig_nivel, use_container_width=True)
+        
+        with col_grafico2:
+            # Gráfico de barras: Promedio por Tipo de Examen
+            promedio_por_tipo = kpis_general.get('promedio_por_tipo', {})
+            if promedio_por_tipo:
+                fig_tipo = go.Figure(data=[go.Bar(
+                    x=list(promedio_por_tipo.keys()),
+                    y=list(promedio_por_tipo.values()),
+                    marker=dict(color='#667eea'),
+                    text=[f"{v:.2f}" for v in promedio_por_tipo.values()],
+                    textposition='outside'
+                )])
+                fig_tipo.update_layout(
+                    title="Promedio de Puntaje por Tipo de Examen",
+                    xaxis_title="Tipo de Examen",
+                    yaxis_title="Puntaje Promedio",
+                    height=400,
+                    xaxis=dict(tickangle=-45)
+                )
+                st.plotly_chart(fig_tipo, use_container_width=True)
+        
+        st.markdown("---")
+        
+        # SECCIÓN 3: Indicadores por Asesor
+        st.markdown("### 👤 Indicadores por Asesor")
+        
+        if not kpis_asesor.empty:
+            # Estadísticas de asesores
+            col_asesor1, col_asesor2, col_asesor3 = st.columns(3)
+            
+            with col_asesor1:
+                asesores_con_bajo = len(kpis_asesor[kpis_asesor['Tiene Bajo'] == 'Sí'])
+                st.write(f"""
+                    <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ffa94d 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                        <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">👥 Asesores con Nivel Bajo</div>
+                        <div style="font-size: 2rem; font-weight: bold; margin: 10px 0;">{asesores_con_bajo}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            with col_asesor2:
+                total_asesores = len(kpis_asesor)
+                pct_con_bajo = (asesores_con_bajo / total_asesores * 100) if total_asesores > 0 else 0
+                st.write(f"""
+                    <div style="background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                        <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">📊 % Asesores con Bajo</div>
+                        <div style="font-size: 2rem; font-weight: bold; margin: 10px 0;">{pct_con_bajo:.2f}%</div>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            with col_asesor3:
+                promedio_aprobacion = kpis_asesor['% Aprobación'].mean()
+                st.write(f"""
+                    <div style="background: linear-gradient(135deg, #51cf66 0%, #28a745 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                        <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">🎯 % Aprobación Promedio</div>
+                        <div style="font-size: 2rem; font-weight: bold; margin: 10px 0;">{promedio_aprobacion:.2f}%</div>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            st.markdown("---")
+            
+            # Tabla de asesores
+            st.markdown("#### 📋 Desempeño Detallado por Asesor")
+            
+            # Ordenar por Evals Nivel Bajo descendente
+            kpis_asesor_sorted = kpis_asesor.sort_values('Evals Nivel Bajo', ascending=False).reset_index(drop=True)
+            
+            # Mostrar tabla con dataframe de Streamlit
+            st.dataframe(kpis_asesor_sorted, use_container_width=True, hide_index=True)
+            
+            # Descarga de datos
+            csv_asesor = kpis_asesor_sorted.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Descargar Desempeño por Asesor en CSV",
+                data=csv_asesor,
+                file_name=f"kpi_asesor_examen_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv"
+            )
+        
+        st.markdown("---")
+        
+        # SECCIÓN 4: Indicadores Temporales
+        st.markdown("### 📅 Indicadores Temporales")
+        
+        kpis_temporal_data = kpis_temporal
+        col_temp1, col_temp2 = st.columns(2)
+        
+        with col_temp1:
+            st.write(f"""
+                <div style="background: linear-gradient(135deg, #1e90ff 0%, #4169e1 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">📋 Volumen Total de Evaluaciones</div>
+                    <div style="font-size: 2rem; font-weight: bold; margin: 10px 0;">{kpis_temporal_data.get('total_evaluaciones', 0)}</div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        with col_temp2:
+            st.write(f"""
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">📊 Promedio Evals/Fecha</div>
+                    <div style="font-size: 2rem; font-weight: bold; margin: 10px 0;">{kpis_temporal_data.get('promedio_evals_fecha', 0):.2f}</div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        # Gráfico de evaluaciones por fecha
+        evals_por_fecha = kpis_temporal_data.get('evals_por_fecha', {})
+        if evals_por_fecha:
+            st.markdown("---")
+            st.markdown("#### 📈 Volumen de Evaluaciones por Fecha")
+            
+            fechas = sorted(evals_por_fecha.keys())
+            valores = [evals_por_fecha[f] for f in fechas]
+            
+            fig_temporal = go.Figure(data=[go.Bar(
+                x=fechas,
+                y=valores,
+                marker=dict(color='#51cf66'),
+                text=valores,
+                textposition='outside'
+            )])
+            fig_temporal.update_layout(
+                title="Evaluaciones Realizadas por Fecha",
+                xaxis_title="Fecha",
+                yaxis_title="Cantidad de Evaluaciones",
+                height=400,
+                template='plotly_white',
+                xaxis=dict(tickangle=-45)
+            )
+            st.plotly_chart(fig_temporal, use_container_width=True)
+    
+    else:
+        st.warning("⚠️ No hay datos disponibles en el archivo **CONSOLIDADO EXAMEN BITEL.xlsx**")
 
 
 
