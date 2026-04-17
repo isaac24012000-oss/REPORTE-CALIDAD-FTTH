@@ -3681,7 +3681,8 @@ with tab_control_calidad:
             )
         
         # Ordenar por Total de Desvios descendente (mayor a menor)
-        df_tabla = df_tabla.sort_values('Total Desvios', ascending=False).reset_index(drop=True)
+        df_tabla['Total Desvios'] = pd.to_numeric(df_tabla['Total Desvios'], errors='coerce')
+        df_tabla = df_tabla.sort_values('Total Desvios', ascending=False, na_position='last').reset_index(drop=True)
         
         for idx, row in df_tabla.iterrows():
             agente = str(row['Agente']).strip()
