@@ -2012,7 +2012,7 @@ def calcular_kpis_por_asesor(df):
 
 
 def calcular_kpis_temporales(df):
-    """Calcula KPIs temporales"""
+    """Calcula KPIs temporales agrupados por semana"""
     if df.empty:
         return {}
     
@@ -2020,18 +2020,23 @@ def calcular_kpis_temporales(df):
         # Volumen de evaluaciones realizadas
         total_evals = len(df)
         
-        # Análisis por fecha (si existe)
-        evals_por_fecha = {}
+        # Análisis por semana (si existe Fecha)
+        evals_por_semana = {}
         if 'Fecha' in df.columns:
-            evals_por_fecha = df.groupby(df['Fecha'].dt.date).size().to_dict()
+            # Agrupar por semana del año (formato: 2026-W12, etc)
+            df_temp = df.copy()
+            df_temp['Semana'] = df_temp['Fecha'].dt.strftime('%Y-W%V')
+            evals_por_semana = df_temp.groupby('Semana').size().to_dict()
+            # Ordenar las semanas
+            evals_por_semana = dict(sorted(evals_por_semana.items()))
         
-        # Promedio de evaluaciones por fecha
-        promedio_evals_fecha = total_evals / len(evals_por_fecha) if evals_por_fecha else 0
+        # Promedio de evaluaciones por semana
+        promedio_evals_semana = total_evals / len(evals_por_semana) if evals_por_semana else 0
         
         return {
             'total_evaluaciones': total_evals,
-            'evals_por_fecha': evals_por_fecha,
-            'promedio_evals_fecha': promedio_evals_fecha
+            'evals_por_semana': evals_por_semana,
+            'promedio_evals_semana': promedio_evals_semana
         }
     except Exception as e:
         st.error(f"Error calculando KPIs temporales: {str(e)}")
@@ -3959,12 +3964,16 @@ with tab_control_calidad:
             """, unsafe_allow_html=True)
         
         with col_kpi4:
-            dist_nivel = kpis_general.get('distribucion_nivel', {})
-            nivel_bajo_count = dist_nivel.get('Bajo', 0)
+            # Calcular el porcentaje de evaluaciones en nivel bajo sobre total de asesores
+            total_asesores_para_kpi = len(kpis_asesor) if not kpis_asesor.empty else 1
+            asesores_bajo_para_kpi = len(kpis_asesor[kpis_asesor['Tiene Bajo'] == 'Sí']) if not kpis_asesor.empty else 0
+            pct_asesores_bajo = (asesores_bajo_para_kpi / total_asesores_para_kpi * 100) if total_asesores_para_kpi > 0 else 0
+            
             st.write(f"""
                 <div style="background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                    <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">⚠️ Evals Nivel Bajo</div>
-                    <div style="font-size: 2.2rem; font-weight: bold; margin: 10px 0;">{nivel_bajo_count}</div>
+                    <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">⚠️ % Asesores Nivel Bajo</div>
+                    <div style="font-size: 2.2rem; font-weight: bold; margin: 10px 0;">{pct_asesores_bajo:.2f}%</div>
+                    <div style="font-size: 0.85rem; opacity: 0.9;">({asesores_bajo_para_kpi} de {total_asesores_para_kpi})</div>
                 </div>
             """, unsafe_allow_html=True)
         
@@ -4017,24 +4026,25 @@ with tab_control_calidad:
         
         if not kpis_asesor.empty:
             # Estadísticas de asesores
+            total_asesores_unicos = len(kpis_asesor)
             col_asesor1, col_asesor2, col_asesor3 = st.columns(3)
             
             with col_asesor1:
                 asesores_con_bajo = len(kpis_asesor[kpis_asesor['Tiene Bajo'] == 'Sí'])
+                pct_asesores_con_bajo = (asesores_con_bajo / total_asesores_unicos * 100) if total_asesores_unicos > 0 else 0
                 st.write(f"""
                     <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ffa94d 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                        <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">👥 Asesores con Nivel Bajo</div>
-                        <div style="font-size: 2rem; font-weight: bold; margin: 10px 0;">{asesores_con_bajo}</div>
+                        <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">👥 % Asesores con Nivel Bajo</div>
+                        <div style="font-size: 2.2rem; font-weight: bold; margin: 10px 0;">{pct_asesores_con_bajo:.2f}%</div>
+                        <div style="font-size: 0.85rem; opacity: 0.9;">({asesores_con_bajo} de {total_asesores_unicos})</div>
                     </div>
                 """, unsafe_allow_html=True)
             
             with col_asesor2:
-                total_asesores = len(kpis_asesor)
-                pct_con_bajo = (asesores_con_bajo / total_asesores * 100) if total_asesores > 0 else 0
                 st.write(f"""
-                    <div style="background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                        <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">📊 % Asesores con Bajo</div>
-                        <div style="font-size: 2rem; font-weight: bold; margin: 10px 0;">{pct_con_bajo:.2f}%</div>
+                    <div style="background: linear-gradient(135deg, #1e90ff 0%, #4169e1 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                        <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">👥 Total Asesores Únicos</div>
+                        <div style="font-size: 2.2rem; font-weight: bold; margin: 10px 0;">{total_asesores_unicos}</div>
                     </div>
                 """, unsafe_allow_html=True)
             
@@ -4086,30 +4096,30 @@ with tab_control_calidad:
         with col_temp2:
             st.write(f"""
                 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                    <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">📊 Promedio Evals/Fecha</div>
-                    <div style="font-size: 2rem; font-weight: bold; margin: 10px 0;">{kpis_temporal_data.get('promedio_evals_fecha', 0):.2f}</div>
+                    <div style="font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">📊 Promedio Evals/Semana</div>
+                    <div style="font-size: 2rem; font-weight: bold; margin: 10px 0;">{kpis_temporal_data.get('promedio_evals_semana', 0):.2f}</div>
                 </div>
             """, unsafe_allow_html=True)
         
-        # Gráfico de evaluaciones por fecha
-        evals_por_fecha = kpis_temporal_data.get('evals_por_fecha', {})
-        if evals_por_fecha:
+        # Gráfico de evaluaciones por semana
+        evals_por_semana = kpis_temporal_data.get('evals_por_semana', {})
+        if evals_por_semana:
             st.markdown("---")
-            st.markdown("#### 📈 Volumen de Evaluaciones por Fecha")
+            st.markdown("#### 📈 Volumen de Evaluaciones por Semana (Marzo - Abril 2026)")
             
-            fechas = sorted(evals_por_fecha.keys())
-            valores = [evals_por_fecha[f] for f in fechas]
+            semanas = list(evals_por_semana.keys())
+            valores = list(evals_por_semana.values())
             
             fig_temporal = go.Figure(data=[go.Bar(
-                x=fechas,
+                x=semanas,
                 y=valores,
                 marker=dict(color='#51cf66'),
                 text=valores,
                 textposition='outside'
             )])
             fig_temporal.update_layout(
-                title="Evaluaciones Realizadas por Fecha",
-                xaxis_title="Fecha",
+                title="Evaluaciones Realizadas por Semana",
+                xaxis_title="Semana (YYYY-WXX)",
                 yaxis_title="Cantidad de Evaluaciones",
                 height=400,
                 template='plotly_white',
