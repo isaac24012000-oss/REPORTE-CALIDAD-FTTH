@@ -584,7 +584,7 @@ def cargar_datos():
 
     # Filtrar usuarios ficticios
 
-    usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP']
+    usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP', 'ZIM_ANTHONYJR_VTP']
 
     df_filtrado = df_filtrado[~df_filtrado['Agentes Zimach'].isin(usuarios_ficticios)]
 
@@ -724,7 +724,7 @@ def cargar_datos_couching():
 
     # Filtrar usuarios ficticios
 
-    usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP']
+    usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP', 'ZIM_ANTHONYJR_VTP']
 
     df_filtrado = df_filtrado[~df_filtrado['Agentes Zimach'].isin(usuarios_ficticios)]
 
@@ -1162,7 +1162,7 @@ def calcular_puntaje_desempeño():
 
         # Filtrar usuarios ficticios
 
-        usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP']
+        usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP', 'ZIM_ANTHONYJR_VTP']
 
         if agente_str in usuarios_ficticios:
 
@@ -1595,7 +1595,7 @@ def cargar_datos_semanas():
         df_cc = df_cc[df_cc['AGENTE'] != 'Sin agente'].copy()
         
         # Filtrar usuarios ficticios
-        usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP']
+        usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP', 'ZIM_ANTHONYJR_VTP']
         df_cc = df_cc[~df_cc['AGENTE'].isin(usuarios_ficticios)].copy()
         
         # Parsear fecha con formato correcto
@@ -1699,7 +1699,7 @@ def cargar_datos_validacion_cobertura():
         df = df.dropna(subset=['AGENTE'])
         
         # Filtrar usuarios ficticios
-        usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP']
+        usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP', 'ZIM_ANTHONYJR_VTP']
         df = df[~df['AGENTE'].isin(usuarios_ficticios)].copy()
         
         # Contar total de leads por agente
@@ -1763,7 +1763,7 @@ def cargar_datos_kpi():
         df = df.dropna(subset=['AGENTE'])
         
         # Filtrar usuarios ficticios
-        usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP']
+        usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP', 'ZIM_ANTHONYJR_VTP']
         df = df[~df['AGENTE'].isin(usuarios_ficticios)].copy()
         
         # Contar total de leads por agente
@@ -2121,7 +2121,8 @@ df_examen_bitel = cargar_datos_examen_bitel()
 usuarios_ficticios = [
     'ZIM_FLAVIOZM_VTP',
     'ZIM_KATHERINEMM_VTP',
-    'ZIM_CARLOSVG_VTP'
+    'ZIM_CARLOSVG_VTP',
+    'ZIM_ANTHONYJR_VTP'
 ]
 
 # Aplicar filtro a todos los DataFrames que contienen información de agentes
@@ -2199,7 +2200,7 @@ if mes_filtro_global and mes_numero_filtro and año_filtro:
                 df_cc = df_cc[(df_cc['Mes'] == mes_numero_filtro) & (df_cc['Año'] == año_filtro)].copy()
                 
                 # Filtrar usuarios ficticios
-                usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP']
+                usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP', 'ZIM_ANTHONYJR_VTP']
                 df_cc = df_cc[~df_cc['AGENTE'].isin(usuarios_ficticios)].copy()
                 
                 # Función para asignar semana
@@ -2266,7 +2267,7 @@ if mes_filtro_global and mes_numero_filtro and año_filtro:
                 df = df[(df['Mes'] == mes_numero_filtro) & (df['Año'] == año_filtro)].copy()
                 
                 # Filtrar usuarios ficticios
-                usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP']
+                usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP', 'ZIM_ANTHONYJR_VTP']
                 df = df[~df['AGENTE'].isin(usuarios_ficticios)].copy()
                 
                 leads_por_agente = df['AGENTE'].value_counts().reset_index()
@@ -2306,7 +2307,7 @@ if mes_filtro_global and mes_numero_filtro and año_filtro:
                 df = df[(df['Mes'] == mes_numero_filtro) & (df['Año'] == año_filtro)].copy()
                 
                 # Filtrar usuarios ficticios
-                usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP']
+                usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP', 'ZIM_ANTHONYJR_VTP']
                 df = df[~df['AGENTE'].isin(usuarios_ficticios)].copy()
                 
                 leads_por_agente = df['AGENTE'].value_counts().reset_index()
@@ -2346,7 +2347,7 @@ if excel_file:
     df_raw_filtrado = df_raw[df_raw['Agentes Zimach'].astype(str).str.contains('ZIM_', case=False, na=False)]
     
     # Filtrar usuarios ficticios
-    usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP']
+    usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP', 'ZIM_ANTHONYJR_VTP']
     df_raw_filtrado = df_raw_filtrado[~df_raw_filtrado['Agentes Zimach'].isin(usuarios_ficticios)].copy()
     
     total_agentes = len(df_raw_filtrado)
@@ -3733,7 +3734,7 @@ with tab_control_calidad:
                 df_raw = df_raw[(df_raw['Mes'] == mes_numero_filtro) & (df_raw['Año'] == año_filtro)].copy()
                 
                 # Filtrar usuarios ficticios
-                usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP']
+                usuarios_ficticios = ['ZIM_FLAVIOZM_VTP', 'ZIM_KATHERINEMM_VTP', 'ZIM_CARLOSVG_VTP', 'ZIM_ANTHONYJR_VTP']
                 df_raw = df_raw[~df_raw['AGENTE'].isin(usuarios_ficticios)].copy()
                 
                 # Calcular casos tipificados por agente (todos excepto nulls)
