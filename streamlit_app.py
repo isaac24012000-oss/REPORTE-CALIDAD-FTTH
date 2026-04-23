@@ -2070,6 +2070,28 @@ df_semanas = cargar_datos_semanas()
 df_examen_bitel = cargar_datos_examen_bitel()
 
 
+# ✅ FILTRO DE USUARIOS FICTICIOS
+# Lista de usuarios ficticios a excluir
+usuarios_ficticios = [
+    'ZIM_FLAVIOZM_VTP',
+    'ZIM_KATHERINEMM_VTP',
+    'ZIM_CARLOSVG_VTP'
+]
+
+# Aplicar filtro a todos los DataFrames que contienen información de agentes
+if not df_control_calidad.empty and 'Agente' in df_control_calidad.columns:
+    df_control_calidad = df_control_calidad[~df_control_calidad['Agente'].isin(usuarios_ficticios)].reset_index(drop=True)
+
+if not df_validacion_cobertura.empty and 'Agente' in df_validacion_cobertura.columns:
+    df_validacion_cobertura = df_validacion_cobertura[~df_validacion_cobertura['Agente'].isin(usuarios_ficticios)].reset_index(drop=True)
+
+if not df_data.empty and 'Agentes Zimach' in df_data.columns:
+    df_data = df_data[~df_data['Agentes Zimach'].isin(usuarios_ficticios)].reset_index(drop=True)
+
+if not df_couching.empty and 'Agentes Zimach' in df_couching.columns:
+    df_couching = df_couching[~df_couching['Agentes Zimach'].isin(usuarios_ficticios)].reset_index(drop=True)
+
+
 # ✅ FILTRO POR MES - REPORTE CALIDAD
 # Extraer meses disponibles de REPORTE CALIDAD.xlsx
 excel_file_calidad = encuentra_archivo_excel('REPORTE CALIDAD.xlsx')
